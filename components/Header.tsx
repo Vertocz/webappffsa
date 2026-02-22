@@ -7,7 +7,6 @@ import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
 const links = [
   { href: '/', label: '🏠 Accueil' },
   { href: '/depot', label: '🔴 Signaler des faits de violence' },
-  { href: '/suivi', label: '🚥 Consulter les dépôts' },
   { href: '/liens-utiles', label: '🆘 Qui peut m\'aider ?'},
 ]
 
