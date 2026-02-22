@@ -158,7 +158,9 @@ export default function SignalForm() {
               onChange={(e) => setFormData({ ...formData, texteEcrit: e.target.value })}
               required
               rows={10}
-              placeholder="Décrivez les faits ici..."
+              placeholder={"Décrivez les faits ici...\n" + 
+                "N'hésitez pas à donner un maximum de détails pour que nous puissions vous aider au mieux.\n" + 
+                "Vous pouvez donner des informations sur les personnes impliquées, les dates, les lieux, etc."}
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-[var(--blue)] focus:outline-none text-lg"
             />
           </Field>
