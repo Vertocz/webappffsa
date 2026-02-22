@@ -22,7 +22,7 @@ export default function CommissionSelector({ value, onChange }: CommissionSelect
             className="w-5 h-5 text-[var(--blue)]"
           />
           <div className="flex-1">
-            <div className="font-semibold text-lg">🛡️ Commission contre les violences</div>
+            <div className="font-semibold text-lg">🛡️ Je signale un fait de violence</div>
           </div>
         </label>
 
@@ -36,7 +36,7 @@ export default function CommissionSelector({ value, onChange }: CommissionSelect
             className="w-5 h-5 text-[var(--blue)]"
           />
           <div className="flex-1">
-            <div className="font-semibold text-lg">⚖️ Commission d'éthique</div>
+            <div className="font-semibold text-lg">⚖️ Je saisis le comité d'éthique</div>
           </div>
         </label>
 

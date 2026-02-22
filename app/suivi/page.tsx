@@ -2,17 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/app/lib/supabase'
+import Link from 'next/link'
 
 interface Signalement {
   id: string
   created_at: string
   type_commission: 'violences' | 'ethique' | 'ne_sais_pas'
-  type_depot: 'vocal' | 'ecrit'
   anonyme: boolean
   nom_prenom: string | null
-  telephone: string | null
-  texte_ecrit: string | null
-  audio_url: string | null
+  statut: string
 }
 
 export default function SuiviSignalements() {
@@ -29,7 +27,7 @@ export default function SuiviSignalements() {
     try {
       let query = supabase
         .from('signalements')
-        .select('*')
+        .select('id, created_at, type_commission, anonyme, nom_prenom, statut')
         .order('created_at', { ascending: false })
 
       if (filtreCommission !== 'tous') {
@@ -59,9 +57,9 @@ export default function SuiviSignalements() {
   const getCommissionLabel = (type: string) => {
     switch (type) {
       case 'violences':
-        return 'Lutte contre les violences'
+        return 'Commission contre les violences'
       case 'ethique':
-        return 'Question éthique'
+        return "Commission d'éthique"
       case 'ne_sais_pas':
         return 'Non précisé'
       default:
@@ -69,10 +67,34 @@ export default function SuiviSignalements() {
     }
   }
 
+  const getStatutBadge = (statut: string) => {
+    const badges = {
+      non_traite: 'bg-gray-200 text-gray-800',
+      non_avenu: 'bg-slate-800 text-slate-300',
+      transmis_ethique: 'bg-[var(--yellow)] text-yellow-900',
+      transmis_discipline: 'bg-[var(--red)] text-red-100',
+      traite: 'bg-green-900 text-green-200'
+    }
+    
+    const labels = {
+      non_traite: 'Non traité',
+      non_avenu: 'Non avenu',
+      transmis_ethique: "Transmis au comité d'éthique",
+      transmis_discipline: 'Transmis à la commission de discipline',
+      traite: 'Traité'
+    }
+
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${badges[statut as keyof typeof badges] || badges.non_traite}`}>
+        {labels[statut as keyof typeof labels] || statut}
+      </span>
+    )
+  }
+
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       <div className="bg-white shadow-md rounded-lg p-6">
-        <h1 className="text-3xl font-bold text-[var(--blue)] mb-6">Suivi des signalements</h1>
+        <h1>Suivi des signalements</h1>
 
         {/* Filtres */}
         <div className="mb-6">
@@ -134,69 +156,67 @@ export default function SuiviSignalements() {
       {/* Liste des signalements */}
       {isLoading ? (
         <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-l-8 border-gray-300 border-t-[var(--blue)]"></div>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-[var(--blue)]"></div>
         </div>
       ) : signalements.length === 0 ? (
         <div className="bg-white shadow-md rounded-lg p-12 text-center text-gray-500">
           Aucun signalement trouvé
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {signalements.map((signalement) => {
-              const borderColors = {
-                violences: 'border-red-500',
-                ethique: 'border-yellow-500',
-                ne_sais_pas: 'border-gray-400'
-              }
-              
-              return (
-                <div
-                  key={signalement.id}
-                  className={`bg-white shadow-md rounded-lg p-6 hover:shadow-lg transition-shadow border-2 ${borderColors[signalement.type_commission]}`}
-                >
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Date */}
-                <div>
-                  <div className="text-sm font-semibold text-gray-600 mb-1">Date de dépôt</div>
-                  <div className="text-gray-900">{formatDate(signalement.created_at)}</div>
-                </div>
-
-                {/* Commission */}
-                <div>
-                  <div className="text-sm font-semibold text-gray-600 mb-1">Commission</div>
-                  <div className="text-gray-900">{getCommissionLabel(signalement.type_commission)}</div>
-                </div>
-
-                {/* Identité */}
-                <div>
-                  <div className="text-sm font-semibold text-gray-600 mb-1">Identité</div>
-                  {signalement.anonyme ? (
-                    <div className="text-gray-500 italic">Anonyme</div>
-                  ) : (
-                    <div>
-                      <div className="text-gray-900">{signalement.nom_prenom || 'Non renseigné'}</div>
-                      {signalement.telephone && (
-                        <div className="text-sm text-gray-600">{signalement.telephone}</div>
-                      )}
+            const borderColors = {
+              violences: 'border-l-red-500',
+              ethique: 'border-l-yellow-500',
+              ne_sais_pas: 'border-l-gray-400'
+            }
+            
+            return (
+              <Link
+                key={signalement.id}
+                href={`/suivi/${signalement.id}`}
+                className={`block bg-white shadow-md rounded-lg p-5 hover:shadow-xl transition-all border-l-8 ${borderColors[signalement.type_commission]} hover:scale-[1.01]`}
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-6 flex-1">
+                    {/* Date */}
+                    <div className="min-w-[100px]">
+                      <div className="text-sm text-gray-500">Date</div>
+                      <div className="font-semibold text-gray-900">{formatDate(signalement.created_at)}</div>
                     </div>
-                  )}
-                </div>
-              </div>
 
-              {/* Contenu */}
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                {signalement.type_depot === 'ecrit' && signalement.texte_ecrit && (
-                    <div className="text-gray-700 bg-gray-50 p-3 rounded">
-                      {signalement.texte_ecrit}
+                    {/* Identité */}
+                    <div className="min-w-[150px]">
+                      <div className="text-sm text-gray-500">Déposant</div>
+                      <div className="font-semibold text-gray-900">
+                        {signalement.anonyme ? (
+                          <span className="italic text-gray-500">Anonyme</span>
+                        ) : (
+                          signalement.nom_prenom || 'Non renseigné'
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Commission */}
+                    <div className="flex-1">
+                      <div className="text-sm text-gray-500">Commission</div>
+                      <div className="font-semibold text-gray-900">{getCommissionLabel(signalement.type_commission)}</div>
+                    </div>
+
+                    {/* Statut */}
+                    <div>
+                      {getStatutBadge(signalement.statut)}
+                    </div>
                   </div>
-                )}
-                {signalement.type_depot === 'vocal' && signalement.audio_url && (
-                    <audio src={signalement.audio_url} controls className="w-full" />
-                )}
-              </div>
-            </div>
-          )
-        })}
+
+                  {/* Flèche */}
+                  <div className="text-gray-400">
+                    →
+                  </div>
+                </div>
+              </Link>
+            )
+          })}
         </div>
       )}
     </div>
