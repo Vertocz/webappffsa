@@ -165,7 +165,7 @@ export default function SignalForm() {
         </div>
       )}
 
-      {/* Coordonnées - maintenant en 2e position */}
+      {/* Coordonnées */}
       <ContactForm
         isAnonymous={isAnonymous}
         onAnonymousChange={setIsAnonymous}
@@ -175,7 +175,7 @@ export default function SignalForm() {
         onTelephoneChange={(value) => setFormData({ ...formData, telephone: value })}
       />
 
-      {/* Choix de la commission - maintenant en dernier */}
+      {/* Choix de la commission */}
       <CommissionSelector
         value={typeCommission}
         onChange={setTypeCommission}

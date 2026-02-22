@@ -120,13 +120,13 @@ export default function ContactForm({
                   onClick={() => setShowModal(false)}
                   className="flex-1 py-3 px-6 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
                 >
-                  Annuler
+                  Donner mes coordonnées
                 </button>
                 <button
                   onClick={handleConfirmAnonymous}
                   className="flex-1 py-3 px-6 bg-[var(--blue)] text-white rounded-lg font-semibold hover:bg-[var(--red)] transition-colors"
                 >
-                  J'ai compris
+                  Rester anonyme
                 </button>
               </div>
             </div>

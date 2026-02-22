@@ -30,7 +30,7 @@ export default function Header() {
         {/* Titre centré */}
         <div className="flex-1 text-center px-4">
           <p className="text-white text-lg md:text-2xl lg:text-3xl xl:text-4xl font-semibold leading-tight">
-            Signalez, nous vous écouterons.
+            Signalez, nous vous écoutons.
           </p>
         </div>
         
