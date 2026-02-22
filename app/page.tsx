@@ -71,7 +71,7 @@ export default function AccueilPage() {
           Vous êtes victime ou témoin de violences ?
         </h3>
         <p className="text-white/90 text-center mb-6">
-          Votre signalement est confidentiel, sécurisé et sera traité avec le plus grand sérieux.
+          Votre signalement sera traité avec attention.
         </p>
         <div className="text-center">
           <Link 
