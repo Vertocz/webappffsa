@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from 'react'
-import { Field, Input, Label } from '@headlessui/react'
+import { Field, Input, Label, Switch } from '@headlessui/react'
 
 interface ContactFormProps {
   isAnonymous: boolean
@@ -22,8 +22,14 @@ export default function ContactForm({
 }: ContactFormProps) {
   const [showModal, setShowModal] = useState(false)
 
-  const handleAnonymousClick = () => {
-    setShowModal(true)
+  const handleToggle = (value: boolean) => {
+    if (value) {
+      // Passer en anonyme → afficher la modale de confirmation
+      setShowModal(true)
+    } else {
+      // Revenir à identifié → directement
+      onAnonymousChange(false)
+    }
   }
 
   const handleConfirmAnonymous = () => {
@@ -33,14 +39,30 @@ export default function ContactForm({
     setShowModal(false)
   }
 
-  const handleReturnToIdentified = () => {
-    onAnonymousChange(false)
-  }
-
   return (
     <div className="bg-gray-50 p-6 rounded-lg">
       <h2 className="text-xl font-bold mb-4 text-[var(--blue)]">Pour qu'on puisse vous aider</h2>
-      
+
+      {/* Switch anonyme */}
+      <div className="flex items-center gap-3 mb-6">
+        <Switch
+          checked={isAnonymous}
+          onChange={handleToggle}
+          className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--blue)] focus:ring-offset-2 ${
+            isAnonymous ? 'bg-yellow-400' : 'bg-gray-300'
+          }`}
+        >
+          <span
+            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform ${
+              isAnonymous ? 'translate-x-8' : 'translate-x-1'
+            }`}
+          />
+        </Switch>
+        <span className="text-base font-semibold text-gray-700 select-none">
+          🔒 Je préfère rester anonyme
+        </span>
+      </div>
+
       {!isAnonymous ? (
         <div className="space-y-4">
           <Field>
@@ -63,40 +85,22 @@ export default function ContactForm({
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-[var(--blue)] focus:outline-none text-lg"
             />
           </Field>
-
-          <button
-            type="button"
-            onClick={handleAnonymousClick}
-            className="w-full py-3 px-6 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors flex items-center justify-center gap-2"
-          >
-            🔒 Je préfère rester anonyme
-          </button>
         </div>
       ) : (
-        <div className="space-y-4">
-          <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6 text-center space-y-3">
-            <p className="text-lg text-gray-800 font-semibold">
-              Vous avez choisi de rester anonyme
-            </p>
-            <p className="text-sm text-gray-600">
-              Votre identité ne sera pas enregistrée
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleReturnToIdentified}
-            className="w-full py-3 px-6 bg-[var(--blue)] text-white rounded-lg font-semibold hover:bg-[var(--red)] transition-colors flex items-center justify-center gap-2"
-          >
-            👤 Finalement, je souhaite fournir mes coordonnées
-          </button>
+        <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6 text-center space-y-2">
+          <p className="text-lg text-gray-800 font-semibold">
+            Vous avez choisi de rester anonyme
+          </p>
+          <p className="text-sm text-gray-600">
+            Votre identité ne sera pas enregistrée
+          </p>
         </div>
       )}
 
       {/* Modal de confirmation */}
       {showModal && (
         <>
-          <div 
+          <div
             className="fixed inset-0 bg-black bg-opacity-50 z-40"
             onClick={() => setShowModal(false)}
           />
@@ -105,7 +109,7 @@ export default function ContactForm({
               <h3 className="text-xl font-bold text-[var(--blue)]">
                 Signalement anonyme
               </h3>
-              
+
               <div className="text-gray-700 space-y-3">
                 <p>
                   Cette option vous permet de signaler mais <strong>limite notre capacité à agir et/ou à vous recontacter</strong>.
