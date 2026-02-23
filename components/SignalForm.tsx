@@ -116,7 +116,7 @@ export default function SignalForm() {
                 : 'bg-white text-gray-700 border-2 border-gray-300 hover:border-[var(--blue)]'
             }`}
           >
-            🎤 Message vocal
+            🗣️ Message vocal
           </button>
           <button
             type="button"
@@ -135,7 +135,7 @@ export default function SignalForm() {
       {/* Enregistrement vocal */}
       {typeDepot === 'vocal' && (
         <div className="bg-gray-50 p-6 rounded-lg space-y-6">
-          <h2 className="text-xl font-bold text-[var(--blue)]">🗣️ Votre message vocal</h2>
+          <h2 className="text-xl font-bold text-[var(--blue)]">🎤 Votre message vocal</h2>
           <VoiceRecorder
             onRecordingComplete={handleRecordingComplete}
             audioBlob={audioBlob}
