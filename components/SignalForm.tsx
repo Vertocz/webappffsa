@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Field, Label, Textarea } from '@headlessui/react'
 import { supabase } from '@/app/lib/supabase'
+import { encryptText, encryptBlob } from '@/app/lib/encryption'
 import VoiceRecorder from './VoiceRecorder'
 import ContactForm from './ContactForm'
 import CommissionSelector from './CommissionSelector'
@@ -48,35 +49,82 @@ export default function SignalForm() {
     setIsSubmitting(true)
 
     try {
-      let audioUrlStored = null
-
-      if (typeDepot === 'vocal' && audioBlob) {
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.webm`
-        const { error: uploadError } = await supabase.storage
-          .from('depots')
-          .upload(fileName, audioBlob, {
-            contentType: 'audio/webm'
-          })
-
-        if (uploadError) throw uploadError
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('depots')
-          .getPublicUrl(fileName)
-
-        audioUrlStored = publicUrl
+      // Récupérer la passphrase depuis les variables d'environnement
+      const passphrase = process.env.NEXT_PUBLIC_ENCRYPTION_KEY
+      if (!passphrase) {
+        throw new Error('Clé de chiffrement non configurée')
       }
 
+      let audioUrlStored = null
+      let encryptedData: any = {}
+
+      // Chiffrement du message écrit
+      if (typeDepot === 'ecrit' && formData.texteEcrit) {
+        const encrypted = await encryptText(formData.texteEcrit, passphrase)
+        encryptedData = {
+          texte_chiffre: encrypted.ciphertext,
+          texte_iv: encrypted.iv,
+          texte_salt: encrypted.salt
+        }
+      }
+
+      // Chiffrement et upload du fichier audio
+      if (typeDepot === 'vocal' && audioBlob) {
+        const { encryptedBlob, iv, salt } = await encryptBlob(audioBlob, passphrase)
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.enc`
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('depots')
+          .upload(fileName, encryptedBlob, {
+            contentType: 'application/octet-stream',
+            cacheControl: '3600',
+            upsert: false
+          })
+
+        if (uploadError) {
+          throw uploadError
+        }
+
+        const filePath = uploadData.path
+        const { data: { publicUrl } } = supabase.storage
+          .from('depots')
+          .getPublicUrl(filePath)
+        
+        audioUrlStored = publicUrl
+        encryptedData = {
+          audio_iv: iv,
+          audio_salt: salt
+        }
+      }
+
+      // Chiffrement des coordonnées si non anonyme
+      let encryptedContact: any = {}
+      if (!isAnonymous && formData.nomPrenom) {
+        const encryptedNom = await encryptText(formData.nomPrenom, passphrase)
+        encryptedContact.nom_prenom_chiffre = encryptedNom.ciphertext
+        encryptedContact.nom_prenom_iv = encryptedNom.iv
+        encryptedContact.nom_prenom_salt = encryptedNom.salt
+      }
+      if (!isAnonymous && formData.telephone) {
+        const encryptedTel = await encryptText(formData.telephone, passphrase)
+        encryptedContact.telephone_chiffre = encryptedTel.ciphertext
+        encryptedContact.telephone_iv = encryptedTel.iv
+        encryptedContact.telephone_salt = encryptedTel.salt
+      }
+
+      // Insérer dans la base de données
       const { error: dbError } = await supabase
         .from('signalements')
         .insert({
           audio_url: audioUrlStored,
           type_depot: typeDepot,
           type_commission: typeCommission,
-          texte_ecrit: typeDepot === 'ecrit' ? formData.texteEcrit : null,
           anonyme: isAnonymous,
-          nom_prenom: !isAnonymous ? formData.nomPrenom : null,
-          telephone: !isAnonymous ? formData.telephone : null
+          ...encryptedData,
+          ...encryptedContact,
+          texte_ecrit: null,
+          nom_prenom: null,
+          telephone: null
         })
 
       if (dbError) throw dbError
@@ -85,7 +133,7 @@ export default function SignalForm() {
       
       setTimeout(() => {
         window.location.href = '/liens-utiles'
-      }, 3000)
+      }, 2000)
 
     } catch (error) {
       console.error('Erreur envoi:', error)
@@ -99,7 +147,7 @@ export default function SignalForm() {
     <form onSubmit={handleSubmit} className="max-w-3xl mx-auto space-y-8 pb-8">
       {showSuccess && (
         <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg z-50 animate-bounce">
-          ✓ Votre signalement a bien été envoyé
+          ✓ Votre signalement a bien été transmis
         </div>
       )}
 
@@ -116,7 +164,7 @@ export default function SignalForm() {
                 : 'bg-white text-gray-700 border-2 border-gray-300 hover:border-[var(--blue)]'
             }`}
           >
-            🗣️ Message vocal
+            🎤 Message vocal
           </button>
           <button
             type="button"
@@ -135,7 +183,7 @@ export default function SignalForm() {
       {/* Enregistrement vocal */}
       {typeDepot === 'vocal' && (
         <div className="bg-gray-50 p-6 rounded-lg space-y-6">
-          <h2 className="text-xl font-bold text-[var(--blue)]">🎤 Votre message vocal</h2>
+          <h2 className="text-xl font-bold text-[var(--blue)]">🗣️ Votre message vocal</h2>
           <VoiceRecorder
             onRecordingComplete={handleRecordingComplete}
             audioBlob={audioBlob}
@@ -158,9 +206,7 @@ export default function SignalForm() {
               onChange={(e) => setFormData({ ...formData, texteEcrit: e.target.value })}
               required
               rows={10}
-              placeholder={"Décrivez les faits ici...\n" + 
-                "N'hésitez pas à donner un maximum de détails pour que nous puissions vous aider au mieux.\n" + 
-                "Vous pouvez donner des informations sur les personnes impliquées, les dates, les lieux, etc."}
+              placeholder="Décrivez les faits ici..."
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-[var(--blue)] focus:outline-none text-lg"
             />
           </Field>
@@ -189,7 +235,7 @@ export default function SignalForm() {
         disabled={isSubmitting || (typeDepot === 'vocal' && !audioBlob) || (typeDepot === 'ecrit' && !formData.texteEcrit)}
         className="w-full py-4 px-6 bg-[var(--yellow)] text-white rounded-lg font-bold text-xl hover:bg-[var(--red)] transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
       >
-        {isSubmitting ? 'Envoi en cours...' : '📤 Envoyer mon signalement'}
+        {isSubmitting ? '🔒 Chiffrement et envoi en cours...' : '📨 Envoyer mon signalement'}
       </button>
     </form>
   )
