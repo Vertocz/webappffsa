@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/app/lib/supabase'
 import Image from 'next/image'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirect = searchParams.get('redirect') || '/suivi'
@@ -27,10 +27,8 @@ export default function LoginPage() {
       })
 
       if (authError) {
-        // "Email not confirmed" → confirmation email activée dans Supabase
-        // → la désactiver dans Dashboard > Auth > Settings > "Confirm email"
         if (authError.message.includes('Email not confirmed')) {
-          setError('Compte non confirmé. Vérifiez votre boîte mail ou désactivez la confirmation email dans Supabase.')
+          setError('Compte non confirmé. Désactivez la confirmation email dans Supabase Dashboard → Auth → Settings.')
         } else {
           setError('Email ou mot de passe incorrect.')
         }
@@ -40,13 +38,63 @@ export default function LoginPage() {
       router.push(redirect)
       router.refresh()
     } catch (err) {
-      console.error('Erreur connexion inattendue:', err)
+      console.error('Erreur connexion:', err)
       setError('Une erreur inattendue est survenue. Réessayez.')
     } finally {
       setIsLoading(false)
     }
   }
 
+  return (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-1">
+          Adresse e-mail
+        </label>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          autoComplete="email"
+          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[var(--blue)] focus:outline-none transition-colors"
+          placeholder="prenom.nom@ffsa.fr"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-1">
+          Mot de passe
+        </label>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          autoComplete="current-password"
+          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[var(--blue)] focus:outline-none transition-colors"
+          placeholder="••••••••"
+        />
+      </div>
+
+      {error && (
+        <div className="p-3 bg-red-50 border-2 border-red-200 rounded-lg text-red-800 text-sm font-medium">
+          {error}
+        </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={isLoading}
+        className="w-full py-3 px-6 bg-[var(--blue)] text-white rounded-lg font-bold text-lg hover:bg-[var(--red)] transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+      >
+        {isLoading ? 'Connexion...' : 'Se connecter'}
+      </button>
+    </form>
+  )
+}
+
+export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-10 space-y-8">
@@ -61,59 +109,18 @@ export default function LoginPage() {
           />
           <div>
             <h1 className="!text-2xl !pt-0 !pb-1">
-              Espace commission
+              Espace administrateur
             </h1>
             <p className="text-gray-500 text-sm">
-              Accès réservé aux membres habilités
+              Connectez-vous pour consulter et gérer les signalements
             </p>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Adresse e-mail
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[var(--blue)] focus:outline-none transition-colors"
-              placeholder="prenom.nom@ffsa.fr"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Mot de passe
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[var(--blue)] focus:outline-none transition-colors"
-              placeholder="••••••••"
-            />
-          </div>
-
-          {error && (
-            <div className="p-3 bg-red-50 border-2 border-red-200 rounded-lg text-red-800 text-sm font-medium">
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full py-3 px-6 bg-[var(--blue)] text-white rounded-lg font-bold text-lg hover:bg-[var(--red)] transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-          >
-            {isLoading ? 'Connexion...' : 'Se connecter'}
-          </button>
-        </form>
+        {/* useSearchParams() doit être dans un Suspense boundary */}
+        <Suspense fallback={<div className="h-48" />}>
+          <LoginForm />
+        </Suspense>
 
         <p className="text-center text-xs text-gray-400">
           🔒 Accès sécurisé — vos actions sont enregistrées
