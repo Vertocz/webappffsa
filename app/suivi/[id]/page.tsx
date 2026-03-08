@@ -5,6 +5,7 @@ import { supabase } from '@/app/lib/supabase'
 import { decryptText, decryptBlob } from '@/app/lib/encryption'
 import { useDecryption } from '@/contexts/DecryptionContext'
 import PassphraseModal from '@/components/PassPhraseModal'
+import Toast from '@/components/Toast'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 
@@ -50,6 +51,11 @@ interface DecryptedData {
   audioUrl?: string
 }
 
+interface ToastState {
+  message: string
+  type: 'success' | 'error'
+}
+
 export default function DetailSignalement() {
   const params = useParams()
   const [signalement, setSignalement] = useState<Signalement | null>(null)
@@ -59,6 +65,7 @@ export default function DetailSignalement() {
   const [isDecrypting, setIsDecrypting] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [selectedStatut, setSelectedStatut] = useState('')
+  const [toast, setToast] = useState<ToastState | null>(null)
   const hasLoggedRef = useRef(false)
   const { passphrase, isAuthenticated } = useDecryption()
 
@@ -66,7 +73,7 @@ export default function DetailSignalement() {
     if (params.id && isAuthenticated) {
       fetchSignalement()
       fetchJournal()
-      
+
       if (!hasLoggedRef.current) {
         logConsultation()
         hasLoggedRef.current = true
@@ -105,7 +112,6 @@ export default function DetailSignalement() {
     try {
       const decrypted: DecryptedData = {}
 
-      // Déchiffrer le nom/prénom
       if (signalement.nom_prenom_chiffre && signalement.nom_prenom_iv && signalement.nom_prenom_salt) {
         try {
           decrypted.nomPrenom = await decryptText(
@@ -120,7 +126,6 @@ export default function DetailSignalement() {
         }
       }
 
-      // Déchiffrer le téléphone
       if (signalement.telephone_chiffre && signalement.telephone_iv && signalement.telephone_salt) {
         try {
           decrypted.telephone = await decryptText(
@@ -135,7 +140,6 @@ export default function DetailSignalement() {
         }
       }
 
-      // Déchiffrer le texte
       if (signalement.texte_chiffre && signalement.texte_iv && signalement.texte_salt) {
         try {
           decrypted.texte = await decryptText(
@@ -150,7 +154,6 @@ export default function DetailSignalement() {
         }
       }
 
-      // Déchiffrer l'audio
       if (signalement.audio_url && signalement.audio_iv && signalement.audio_salt) {
         try {
           console.log('Tentative de déchiffrement audio...')
@@ -158,10 +161,10 @@ export default function DetailSignalement() {
           if (!response.ok) {
             throw new Error(`Erreur téléchargement audio: ${response.status}`)
           }
-          
+
           const encryptedBlob = await response.blob()
           console.log('Blob téléchargé:', encryptedBlob.size, 'bytes')
-          
+
           const decryptedBlob = await decryptBlob(
             encryptedBlob,
             signalement.audio_iv,
@@ -170,12 +173,11 @@ export default function DetailSignalement() {
             'audio/webm'
           )
           console.log('Blob déchiffré:', decryptedBlob.size, 'bytes')
-          
+
           decrypted.audioUrl = URL.createObjectURL(decryptedBlob)
           console.log('URL audio créée:', decrypted.audioUrl)
         } catch (err) {
           console.error('Erreur déchiffrement audio:', err)
-          // Ne pas bloquer l'affichage, juste logger l'erreur
           decrypted.audioUrl = undefined
         }
       }
@@ -242,48 +244,43 @@ export default function DetailSignalement() {
       await fetchSignalement()
       await fetchJournal()
 
-      alert('Statut mis à jour avec succès')
+      setToast({ message: 'Statut mis à jour avec succès', type: 'success' })
     } catch (error) {
       console.error('Erreur mise à jour statut:', error)
-      alert('Erreur lors de la mise à jour du statut')
+      setToast({ message: 'Erreur lors de la mise à jour du statut', type: 'error' })
     } finally {
       setIsSaving(false)
     }
   }
 
   const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString)
     return new Intl.DateTimeFormat('fr-FR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
-    }).format(date)
+    }).format(new Date(dateString))
   }
 
   const getCommissionLabel = (type: string) => {
     switch (type) {
-      case 'violences':
-        return 'Commission contre les violences'
-      case 'ethique':
-        return "Commission d'éthique"
-      case 'ne_sais_pas':
-        return 'Non précisé'
-      default:
-        return type
+      case 'violences':   return 'Commission contre les violences'
+      case 'ethique':     return "Commission d'éthique"
+      case 'ne_sais_pas': return 'Non précisé'
+      default:            return type
     }
   }
 
   const getStatutLabel = (statut: string) => {
-    const labels = {
-      non_traite: 'Non traité',
-      non_avenu: 'Non avenu',
-      transmis_ethique: "Transmis au comité d'éthique",
+    const labels: Record<string, string> = {
+      non_traite:          'Non traité',
+      non_avenu:           'Non avenu',
+      transmis_ethique:    "Transmis au comité d'éthique",
       transmis_discipline: 'Transmis à la commission de discipline',
-      traite: 'Traité'
+      traite:              'Traité'
     }
-    return labels[statut as keyof typeof labels] || statut
+    return labels[statut] || statut
   }
 
   if (isLoading) {
@@ -309,19 +306,26 @@ export default function DetailSignalement() {
     )
   }
 
-  // Utiliser les données déchiffrées si disponibles, sinon les données en clair (anciennes)
   const displayNomPrenom = decryptedData.nomPrenom || signalement.nom_prenom
   const displayTelephone = decryptedData.telephone || signalement.telephone
-  const displayTexte = decryptedData.texte || signalement.texte_ecrit
-  const displayAudioUrl = decryptedData.audioUrl || signalement.audio_url
+  const displayTexte     = decryptedData.texte || signalement.texte_ecrit
+  const displayAudioUrl  = decryptedData.audioUrl || signalement.audio_url
 
   return (
     <>
       <PassphraseModal />
-      
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
       <div className="max-w-4xl mx-auto p-6 space-y-6">
         <div className="flex items-center gap-4">
-          <Link 
+          <Link
             href="/suivi"
             className="text-[var(--blue)] hover:underline font-semibold"
           >
@@ -329,7 +333,6 @@ export default function DetailSignalement() {
           </Link>
         </div>
 
-        {/* Badge déchiffrement */}
         {isDecrypting && (
           <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 text-center">
             <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-blue-600 border-t-transparent mr-3"></div>
@@ -376,7 +379,7 @@ export default function DetailSignalement() {
 
         <div className="bg-white shadow-lg rounded-lg p-6">
           <h2>Contenu du signalement</h2>
-          
+
           <div className="mt-4">
             {signalement.type_depot === 'ecrit' && displayTexte && (
               <div className="bg-gray-50 p-4 rounded-lg text-gray-700 whitespace-pre-wrap">
@@ -384,9 +387,7 @@ export default function DetailSignalement() {
               </div>
             )}
             {signalement.type_depot === 'vocal' && displayAudioUrl && (
-              <div>
-                <audio src={displayAudioUrl} controls className="w-full" />
-              </div>
+              <audio src={displayAudioUrl} controls className="w-full" />
             )}
             {signalement.type_depot === 'vocal' && !displayAudioUrl && signalement.audio_url && (
               <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 text-red-800">
@@ -398,67 +399,30 @@ export default function DetailSignalement() {
 
         <div className="bg-white shadow-lg rounded-lg p-6">
           <h2>Gestion du statut</h2>
-          
+
           <div className="mt-4 space-y-3">
-            <label className="flex items-center gap-3 p-3 hover:bg-gray-200 hover:text-gray-800 rounded-lg cursor-pointer bg-gray-100 text-gray-900 transition-colors">
-              <input
-                type="radio"
-                name="statut"
-                value="non_traite"
-                checked={selectedStatut === 'non_traite'}
-                onChange={(e) => setSelectedStatut(e.target.value)}
-                className="w-4 h-4"
-              />
-              <span className="font-medium">Non traité</span>
-            </label>
-
-            <label className="flex items-center gap-3 p-3 hover:bg-slate-800 hover:text-slate-300 rounded-lg cursor-pointer bg-gray-100 text-gray-900 transition-colors">
-              <input
-                type="radio"
-                name="statut"
-                value="non_avenu"
-                checked={selectedStatut === 'non_avenu'}
-                onChange={(e) => setSelectedStatut(e.target.value)}
-                className="w-4 h-4"
-              />
-              <span className="font-medium">Non avenu</span>
-            </label>
-
-            <label className="flex items-center gap-3 p-3 hover:bg-[var(--yellow)] hover:text-yellow-900 rounded-lg cursor-pointer bg-gray-100 text-gray-900 transition-colors">
-              <input
-                type="radio"
-                name="statut"
-                value="transmis_ethique"
-                checked={selectedStatut === 'transmis_ethique'}
-                onChange={(e) => setSelectedStatut(e.target.value)}
-                className="w-4 h-4"
-              />
-              <span className="font-medium">Transmis au comité d'éthique</span>
-            </label>
-
-            <label className="flex items-center gap-3 p-3 hover:bg-[var(--red)] hover:text-red-100 rounded-lg cursor-pointer bg-gray-100 text-gray-900 transition-colors">
-              <input
-                type="radio"
-                name="statut"
-                value="transmis_discipline"
-                checked={selectedStatut === 'transmis_discipline'}
-                onChange={(e) => setSelectedStatut(e.target.value)}
-                className="w-4 h-4"
-              />
-              <span className="font-medium">Transmis à la commission de discipline</span>
-            </label>
-
-            <label className="flex items-center gap-3 p-3 hover:bg-green-900 hover:text-green-200 rounded-lg cursor-pointer bg-gray-100 text-gray-900 transition-colors">
-              <input
-                type="radio"
-                name="statut"
-                value="traite"
-                checked={selectedStatut === 'traite'}
-                onChange={(e) => setSelectedStatut(e.target.value)}
-                className="w-4 h-4"
-              />
-              <span className="font-medium">Traité</span>
-            </label>
+            {[
+              { value: 'non_traite',          label: 'Non traité',                               hover: 'hover:bg-gray-200 hover:text-gray-800' },
+              { value: 'non_avenu',           label: 'Non avenu',                                hover: 'hover:bg-slate-800 hover:text-slate-300' },
+              { value: 'transmis_ethique',    label: "Transmis au comité d'éthique",             hover: 'hover:bg-[var(--yellow)] hover:text-yellow-900' },
+              { value: 'transmis_discipline', label: 'Transmis à la commission de discipline',   hover: 'hover:bg-[var(--red)] hover:text-red-100' },
+              { value: 'traite',              label: 'Traité',                                   hover: 'hover:bg-green-900 hover:text-green-200' },
+            ].map(({ value, label, hover }) => (
+              <label
+                key={value}
+                className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer bg-gray-100 text-gray-900 transition-colors ${hover}`}
+              >
+                <input
+                  type="radio"
+                  name="statut"
+                  value={value}
+                  checked={selectedStatut === value}
+                  onChange={(e) => setSelectedStatut(e.target.value)}
+                  className="w-4 h-4"
+                />
+                <span className="font-medium">{label}</span>
+              </label>
+            ))}
           </div>
 
           <button
@@ -472,7 +436,7 @@ export default function DetailSignalement() {
 
         <div className="bg-white shadow-lg rounded-lg p-6">
           <h2>Historique des accès et modifications</h2>
-          
+
           {journal.length === 0 ? (
             <p className="text-gray-500 mt-4">Aucun historique disponible</p>
           ) : (
@@ -482,15 +446,15 @@ export default function DetailSignalement() {
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="font-semibold">{entry.utilisateur}</span>
-                      {' - '}
+                      {' — '}
                       <span className="text-gray-600">
                         {entry.action === 'consultation' && 'a consulté le signalement'}
-                        {entry.action === 'modification_statut' && 
+                        {entry.action === 'modification_statut' &&
                           `a modifié le statut de "${getStatutLabel(entry.ancien_statut || '')}" vers "${getStatutLabel(entry.nouveau_statut || '')}"`
                         }
                       </span>
                     </div>
-                    <div className="text-gray-500 text-xs">
+                    <div className="text-gray-500 text-xs shrink-0 ml-4">
                       {formatDateTime(entry.created_at)}
                     </div>
                   </div>

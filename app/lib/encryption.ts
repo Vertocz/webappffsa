@@ -1,18 +1,32 @@
 // Module de chiffrement end-to-end pour les signalements
-// Utilise WebCrypto API (natif dans les navigateurs)
+// Utilise WebCrypto API (natif dans les navigateurs modernes)
+
+/**
+ * Retourne crypto.subtle en s'assurant qu'on est bien côté navigateur.
+ * Next.js effectue un SSR même pour les composants "use client" : cette
+ * fonction évite que le module crashe pendant ce rendu serveur.
+ */
+function getSubtle(): SubtleCrypto {
+  const subtle = globalThis.crypto?.subtle
+  if (!subtle) {
+    throw new Error(
+      'WebCrypto API non disponible. Le chiffrement doit être exécuté côté navigateur.'
+    )
+  }
+  return subtle
+}
 
 /**
  * Génère une clé de chiffrement à partir d'une passphrase
- * Cette clé sera stockée dans les variables d'environnement
  */
-// La fonction accepte n'importe quel BufferSource (ArrayBuffer ou vue) afin
-// d'éviter les incompatibilités de typage entre les définitions de lib.dom.
 export async function deriveKey(
   passphrase: string,
   salt: BufferSource
 ): Promise<CryptoKey> {
+  const subtle = getSubtle()
   const encoder = new TextEncoder()
-  const passphraseKey = await crypto.subtle.importKey(
+
+  const passphraseKey = await subtle.importKey(
     'raw',
     encoder.encode(passphrase),
     'PBKDF2',
@@ -20,7 +34,7 @@ export async function deriveKey(
     ['deriveBits', 'deriveKey']
   )
 
-  return crypto.subtle.deriveKey(
+  return subtle.deriveKey(
     {
       name: 'PBKDF2',
       salt: salt,
@@ -41,32 +55,23 @@ export async function encryptText(
   plaintext: string,
   passphrase: string
 ): Promise<{ ciphertext: string; iv: string; salt: string }> {
-  // Générer un salt et un IV aléatoires
-  const salt = crypto.getRandomValues(new Uint8Array(16))
-  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const subtle = getSubtle()
 
-  // Dériver la clé
-  const key = await deriveKey(passphrase, salt)
+  const salt = globalThis.crypto.getRandomValues(new Uint8Array(16))
+  const iv   = globalThis.crypto.getRandomValues(new Uint8Array(12))
+  const key  = await deriveKey(passphrase, salt)
 
-  // Encoder le texte
   const encoder = new TextEncoder()
-  const data = encoder.encode(plaintext)
-
-  // Chiffrer
-  const ciphertextBuffer = await crypto.subtle.encrypt(
-    {
-      name: 'AES-GCM',
-      iv: iv
-    },
+  const ciphertextBuffer = await subtle.encrypt(
+    { name: 'AES-GCM', iv },
     key,
-    data
+    encoder.encode(plaintext)
   )
 
-  // Convertir en base64 pour stockage
   return {
     ciphertext: arrayBufferToBase64(ciphertextBuffer),
-    iv: arrayBufferToBase64(iv),
-    salt: arrayBufferToBase64(salt)
+    iv:         arrayBufferToBase64(iv),
+    salt:       arrayBufferToBase64(salt)
   }
 }
 
@@ -79,27 +84,21 @@ export async function decryptText(
   salt: string,
   passphrase: string
 ): Promise<string> {
-  // Convertir depuis base64
-  const ciphertextBuffer = base64ToArrayBuffer(ciphertext)
-  const ivBuffer = base64ToArrayBuffer(iv)
-  const saltBuffer = base64ToArrayBuffer(salt)
+  const subtle = getSubtle()
 
-  // Dériver la clé
+  const ciphertextBuffer = base64ToArrayBuffer(ciphertext)
+  const ivBuffer         = base64ToArrayBuffer(iv)
+  const saltBuffer       = base64ToArrayBuffer(salt)
+
   const key = await deriveKey(passphrase, new Uint8Array(saltBuffer))
 
-  // Déchiffrer
-  const plaintextBuffer = await crypto.subtle.decrypt(
-    {
-      name: 'AES-GCM',
-      iv: new Uint8Array(ivBuffer)
-    },
+  const plaintextBuffer = await subtle.decrypt(
+    { name: 'AES-GCM', iv: new Uint8Array(ivBuffer) },
     key,
     ciphertextBuffer
   )
 
-  // Décoder le texte
-  const decoder = new TextDecoder()
-  return decoder.decode(plaintextBuffer)
+  return new TextDecoder().decode(plaintextBuffer)
 }
 
 /**
@@ -109,33 +108,23 @@ export async function encryptBlob(
   blob: Blob,
   passphrase: string
 ): Promise<{ encryptedBlob: Blob; iv: string; salt: string }> {
-  // Générer salt et IV
-  const salt = crypto.getRandomValues(new Uint8Array(16))
-  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const subtle = getSubtle()
 
-  // Dériver la clé
-  const key = await deriveKey(passphrase, salt)
+  const salt = globalThis.crypto.getRandomValues(new Uint8Array(16))
+  const iv   = globalThis.crypto.getRandomValues(new Uint8Array(12))
+  const key  = await deriveKey(passphrase, salt)
 
-  // Lire le blob en ArrayBuffer
-  const arrayBuffer = await blob.arrayBuffer()
-
-  // Chiffrer
-  const encryptedBuffer = await crypto.subtle.encrypt(
-    {
-      name: 'AES-GCM',
-      iv: iv
-    },
+  const arrayBuffer     = await blob.arrayBuffer()
+  const encryptedBuffer = await subtle.encrypt(
+    { name: 'AES-GCM', iv },
     key,
     arrayBuffer
   )
 
-  // Créer un nouveau blob chiffré
-  const encryptedBlob = new Blob([encryptedBuffer], { type: 'application/octet-stream' })
-
   return {
-    encryptedBlob,
-    iv: arrayBufferToBase64(iv),
-    salt: arrayBufferToBase64(salt)
+    encryptedBlob: new Blob([encryptedBuffer], { type: 'application/octet-stream' }),
+    iv:            arrayBufferToBase64(iv),
+    salt:          arrayBufferToBase64(salt)
   }
 }
 
@@ -149,41 +138,29 @@ export async function decryptBlob(
   passphrase: string,
   originalType: string = 'audio/webm'
 ): Promise<Blob> {
-  // Convertir depuis base64
-  const ivBuffer = base64ToArrayBuffer(iv)
-  const saltBuffer = base64ToArrayBuffer(salt)
+  const subtle = getSubtle()
 
-  // Dériver la clé
-  const key = await deriveKey(passphrase, new Uint8Array(saltBuffer))
-
-  // Lire le blob chiffré
+  const ivBuffer       = base64ToArrayBuffer(iv)
+  const saltBuffer     = base64ToArrayBuffer(salt)
+  const key            = await deriveKey(passphrase, new Uint8Array(saltBuffer))
   const encryptedBuffer = await encryptedBlob.arrayBuffer()
 
-  // Déchiffrer
-  const decryptedBuffer = await crypto.subtle.decrypt(
-    {
-      name: 'AES-GCM',
-      iv: new Uint8Array(ivBuffer)
-    },
+  const decryptedBuffer = await subtle.decrypt(
+    { name: 'AES-GCM', iv: new Uint8Array(ivBuffer) },
     key,
     encryptedBuffer
   )
 
-  // Retourner le blob déchiffré avec le bon type MIME
   return new Blob([decryptedBuffer], { type: originalType })
 }
 
-/**
- * Utilitaires de conversion
- */
-// accepte ArrayBuffer ou n'importe quelle vue (Uint8Array, etc.)
+// ─── Utilitaires de conversion ─────────────────────────────────────────────
+
 function arrayBufferToBase64(buffer: BufferSource): string {
-  // convertir en Uint8Array peu importe l'entrée
   let bytes: Uint8Array
   if (buffer instanceof ArrayBuffer) {
     bytes = new Uint8Array(buffer)
   } else {
-    // ArrayBufferView
     const view = buffer as ArrayBufferView
     bytes = new Uint8Array(view.buffer, view.byteOffset, view.byteLength)
   }
@@ -209,6 +186,6 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
  */
 export function generatePassphrase(): string {
   const array = new Uint8Array(32)
-  crypto.getRandomValues(array)
+  globalThis.crypto.getRandomValues(array)
   return arrayBufferToBase64(array.buffer)
 }
