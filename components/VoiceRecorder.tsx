@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useState, useRef, useEffect } from 'react'
 
@@ -27,6 +27,8 @@ export default function VoiceRecorder({
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const animationRef = useRef<number | null>(null)
+  // Ref pour avoir la durée courante dans le callback onstop (évite la stale closure)
+  const localRecordingTimeRef = useRef(0)
 
   const MAX_RECORDING_TIME = 600 // 10 minutes
 
@@ -52,17 +54,17 @@ export default function VoiceRecorder({
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      
+
       audioContextRef.current = new AudioContext()
       const source = audioContextRef.current.createMediaStreamSource(stream)
       analyserRef.current = audioContextRef.current.createAnalyser()
       analyserRef.current.fftSize = 256
       source.connect(analyserRef.current)
-      
+
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'audio/webm;codecs=opus'
       })
-      
+
       mediaRecorderRef.current = mediaRecorder
       audioChunksRef.current = []
 
@@ -74,8 +76,9 @@ export default function VoiceRecorder({
 
       mediaRecorder.onstop = () => {
         const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
-        onRecordingComplete(blob, localRecordingTime)
-        
+        // Utilise la ref pour avoir la durée réelle, pas la valeur capturée au démarrage
+        onRecordingComplete(blob, localRecordingTimeRef.current)
+
         stream.getTracks().forEach(track => track.stop())
         if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
           audioContextRef.current.close().catch(() => {})
@@ -90,21 +93,21 @@ export default function VoiceRecorder({
       mediaRecorder.start()
       setIsRecording(true)
       setLocalRecordingTime(0)
+      localRecordingTimeRef.current = 0
       analyzeAudio()
 
       timerRef.current = setInterval(() => {
         setLocalRecordingTime(prev => {
-          if (prev >= MAX_RECORDING_TIME) {
-            stopRecording()
-            return prev
-          }
-          return prev + 1
+          const next = prev >= MAX_RECORDING_TIME ? prev : prev + 1
+          localRecordingTimeRef.current = next
+          if (prev >= MAX_RECORDING_TIME) stopRecording()
+          return next
         })
       }, 1000)
 
     } catch (error) {
       console.error('Erreur accès micro:', error)
-      alert('Impossible d\'accéder au microphone. Vérifiez les permissions.')
+      alert("Impossible d'accéder au microphone. Vérifiez les permissions.")
     }
   }
 
@@ -180,8 +183,8 @@ export default function VoiceRecorder({
       )}
 
       <p className="text-gray-600">
-        {isRecording 
-          ? 'Enregistrement en cours...' 
+        {isRecording
+          ? 'Enregistrement en cours...'
           : 'Cliquez sur le bouton pour commencer à parler'}
       </p>
     </div>

@@ -1,18 +1,17 @@
-import "./globals.css";
-import type { Metadata } from "next";
-import type { ReactNode } from "react";
-import Header from "@/components/Header";
-import { DecryptionProvider } from '@/contexts/DecryptionContext'
+import "./globals.css"
+import type { Metadata } from "next"
+import type { ReactNode } from "react"
+import HeaderClient from "@/components/HeaderClient"
 
 export const metadata: Metadata = {
   title: {
-    default: "Signalement FFSA",
+    default: "Ethik — Signalement FFSA",
     template: "%s | Ethik FFSA",
   },
   description:
     "Plateforme de signalement confidentiel de violences et de questions éthiques au sein de la Fédération Française de Sport Adapté.",
   robots: {
-    index: false,   // On ne veut pas que Google indexe une plateforme de signalement
+    index: false,
     follow: false,
   },
 }
@@ -21,11 +20,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="fr">
       <body>
-        <Header />
-        <DecryptionProvider>
-          {children}
-        </DecryptionProvider>
+        <HeaderClient />
+        {children}
       </body>
     </html>
-  );
+  )
 }
