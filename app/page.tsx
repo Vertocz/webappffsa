@@ -65,7 +65,7 @@ function AutoPlayYouTube({ videoId }: { videoId: string }) {
 export default function AccueilPage() {
   return (
     <section className="container mx-auto px-4">
-      <h1>Signalement de violences au sein de la FFSA</h1>
+      <h1>Signalement pour un.e licencié.e à la FFSA</h1>
       <div className="max-w-3xl mx-auto my-12 bg-gradient-to-br from-[var(--blue)] to-[var(--red)] rounded-2xl p-8 shadow-2xl">
         <h3 className="text-white text-center text-2xl font-bold mb-4">
           Vous êtes victime ou témoin de violences ?

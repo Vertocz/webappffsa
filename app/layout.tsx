@@ -5,11 +5,11 @@ import HeaderClient from "@/components/HeaderClient"
 
 export const metadata: Metadata = {
   title: {
-    default: "Ethik — Signalement FFSA",
+    default: "Plateforme de Signalements - FFSA",
     template: "%s | Ethik FFSA",
   },
   description:
-    "Plateforme de signalement confidentiel de violences et de questions éthiques au sein de la Fédération Française de Sport Adapté.",
+    "Plateforme de signalements confidentiels de violences et de questions éthiques au sein de la Fédération Française de Sport Adapté.",
   robots: {
     index: false,
     follow: false,

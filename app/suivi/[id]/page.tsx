@@ -45,6 +45,14 @@ interface JournalEntry {
   created_at: string
 }
 
+interface Commentaire {
+  id: string
+  signalement_id: string
+  auteur: string
+  contenu: string
+  created_at: string
+}
+
 interface DecryptedData {
   nomPrenom?: string
   telephone?: string
@@ -57,7 +65,6 @@ interface ToastState {
   type: 'success' | 'error'
 }
 
-// Convertit une chaîne base64 (retournée par le server action) en Object URL audio
 function base64ToObjectUrl(base64: string): string {
   const binary = atob(base64)
   const bytes = new Uint8Array(binary.length)
@@ -73,17 +80,26 @@ export default function DetailSignalement() {
   const [signalement, setSignalement] = useState<Signalement | null>(null)
   const [decryptedData, setDecryptedData] = useState<DecryptedData>({})
   const [journal, setJournal] = useState<JournalEntry[]>([])
+  const [commentaires, setCommentaires] = useState<Commentaire[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDecrypting, setIsDecrypting] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [isSavingComment, setIsSavingComment] = useState(false)
   const [selectedStatut, setSelectedStatut] = useState('')
   const [toast, setToast] = useState<ToastState | null>(null)
+  const [journalOpen, setJournalOpen] = useState(false)
+  const [showCommentForm, setShowCommentForm] = useState(false)
+  const [commentAuteur, setCommentAuteur] = useState('')
+  const [commentContenu, setCommentContenu] = useState('')
+  const [statutSuggestComment, setStatutSuggestComment] = useState(false)
+
   const audioObjectUrl = useRef<string | null>(null)
   const hasLoggedRef = useRef(false)
 
   useEffect(() => {
     fetchSignalement()
     fetchJournal()
+    fetchCommentaires()
     if (!hasLoggedRef.current) {
       hasLoggedRef.current = true
       actionLogConsultation(id).catch(console.error)
@@ -94,7 +110,6 @@ export default function DetailSignalement() {
     if (signalement) decryptAll(signalement)
   }, [signalement])
 
-  // Libère l'Object URL audio quand le composant est démonté
   useEffect(() => {
     return () => {
       if (audioObjectUrl.current) URL.revokeObjectURL(audioObjectUrl.current)
@@ -132,12 +147,25 @@ export default function DetailSignalement() {
     }
   }
 
+  const fetchCommentaires = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('commentaires_signalement')
+        .select('*')
+        .eq('signalement_id', id)
+        .order('created_at', { ascending: true })
+      if (error) throw error
+      setCommentaires(data || [])
+    } catch (err) {
+      console.error('Erreur chargement commentaires:', err)
+    }
+  }
+
   const decryptAll = async (s: Signalement) => {
     setIsDecrypting(true)
     const decrypted: DecryptedData = {}
 
     try {
-      // Nom / prénom
       if (s.nom_prenom_chiffre && s.nom_prenom_iv && s.nom_prenom_salt) {
         try {
           decrypted.nomPrenom = await actionDecryptText(
@@ -146,7 +174,6 @@ export default function DetailSignalement() {
         } catch { decrypted.nomPrenom = '[Erreur déchiffrement]' }
       }
 
-      // Téléphone
       if (s.telephone_chiffre && s.telephone_iv && s.telephone_salt) {
         try {
           decrypted.telephone = await actionDecryptText(
@@ -155,7 +182,6 @@ export default function DetailSignalement() {
         } catch { decrypted.telephone = '[Erreur déchiffrement]' }
       }
 
-      // Texte
       if (s.texte_chiffre && s.texte_iv && s.texte_salt) {
         try {
           decrypted.texte = await actionDecryptText(
@@ -164,7 +190,6 @@ export default function DetailSignalement() {
         } catch { decrypted.texte = '[Erreur déchiffrement]' }
       }
 
-      // Audio
       if (s.audio_url && s.audio_iv && s.audio_salt) {
         try {
           const base64 = await actionDecryptAudio(s.audio_url, s.audio_iv, s.audio_salt)
@@ -192,17 +217,48 @@ export default function DetailSignalement() {
         .eq('id', signalement.id)
       if (error) throw error
 
-      // Journal avec l'email réel (server action)
       await actionLogStatutChange(signalement.id, signalement.statut, selectedStatut)
 
       await fetchSignalement()
       await fetchJournal()
+
+      if (selectedStatut === 'traite') {
+        setStatutSuggestComment(true)
+        setShowCommentForm(true)
+      }
+
       setToast({ message: 'Statut mis à jour avec succès', type: 'success' })
     } catch (err) {
       console.error('Erreur mise à jour statut:', err)
       setToast({ message: 'Erreur lors de la mise à jour du statut', type: 'error' })
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleAddCommentaire = async () => {
+    if (!commentAuteur.trim() || !commentContenu.trim()) return
+    setIsSavingComment(true)
+    try {
+      const { error } = await supabase
+        .from('commentaires_signalement')
+        .insert({
+          signalement_id: id,
+          auteur: commentAuteur.trim(),
+          contenu: commentContenu.trim(),
+        })
+      if (error) throw error
+      setCommentContenu('')
+      setCommentAuteur('')
+      setShowCommentForm(false)
+      setStatutSuggestComment(false)
+      await fetchCommentaires()
+      setToast({ message: 'Commentaire ajouté', type: 'success' })
+    } catch (err) {
+      console.error('Erreur ajout commentaire:', err)
+      setToast({ message: "Erreur lors de l'ajout du commentaire", type: 'error' })
+    } finally {
+      setIsSavingComment(false)
     }
   }
 
@@ -373,35 +429,138 @@ export default function DetailSignalement() {
           </button>
         </div>
 
-        {/* Journal */}
+        {/* Commentaires */}
         <div className="bg-white shadow-lg rounded-lg p-6">
-          <h2>Historique des accès et modifications</h2>
-          {journal.length === 0 ? (
-            <p className="text-gray-500 mt-4">Aucun historique disponible</p>
-          ) : (
-            <div className="mt-4 space-y-2">
-              {journal.map((entry) => (
-                <div key={entry.id} className="p-3 bg-gray-50 rounded-lg text-sm">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-semibold">{entry.utilisateur}</span>
-                      {' — '}
-                      <span className="text-gray-600">
-                        {entry.action === 'consultation' && 'a consulté le signalement'}
-                        {entry.action === 'modification_statut' &&
-                          `a modifié le statut de "${getStatutLabel(entry.ancien_statut ?? '')}" vers "${getStatutLabel(entry.nouveau_statut ?? '')}"`
-                        }
-                      </span>
-                    </div>
-                    <div className="text-gray-500 text-xs shrink-0 ml-4">
-                      {formatDateTime(entry.created_at)}
-                    </div>
+          <div className="flex items-center justify-between mb-4">
+            <h2>Commentaires</h2>
+            {!showCommentForm && (
+              <button
+                onClick={() => setShowCommentForm(true)}
+                className="text-sm px-4 py-2 bg-[var(--blue)] text-white rounded-lg hover:bg-[var(--red)] transition-colors font-medium"
+              >
+                + Ajouter un commentaire
+              </button>
+            )}
+          </div>
+
+          {/* Invitation après passage à "traité" */}
+          {statutSuggestComment && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm">
+              ✅ Statut passé à <strong>Traité</strong>. Souhaitez-vous laisser une note sur ce traitement ? (contact, contexte, suites données…)
+            </div>
+          )}
+
+          {/* Fil des commentaires */}
+          {commentaires.length === 0 && !showCommentForm && (
+            <p className="text-gray-400 italic text-sm">Aucun commentaire pour l'instant.</p>
+          )}
+
+          {commentaires.length > 0 && (
+            <div className="space-y-3 mb-4">
+              {commentaires.map((c) => (
+                <div key={c.id} className="p-4 bg-gray-50 rounded-lg border-l-4 border-[var(--blue)]">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold text-gray-800 text-sm">{c.auteur}</span>
+                    <span className="text-xs text-gray-400">{formatDateTime(c.created_at)}</span>
                   </div>
+                  <p className="text-gray-700 text-sm whitespace-pre-wrap">{c.contenu}</p>
                 </div>
               ))}
             </div>
           )}
+
+          {/* Formulaire d'ajout */}
+          {showCommentForm && (
+            <div className="border-2 border-gray-200 rounded-lg p-4 space-y-3">
+              <div>
+                <label className="text-sm font-semibold text-gray-600 block mb-1">
+                  Votre nom affiché
+                </label>
+                <input
+                  type="text"
+                  value={commentAuteur}
+                  onChange={(e) => setCommentAuteur(e.target.value)}
+                  placeholder="Ex : Marie D."
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--blue)]"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-gray-600 block mb-1">
+                  Commentaire
+                </label>
+                <textarea
+                  value={commentContenu}
+                  onChange={(e) => setCommentContenu(e.target.value)}
+                  placeholder="Contact établi, contexte, suite donnée..."
+                  rows={4}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--blue)] resize-none"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => {
+                    setShowCommentForm(false)
+                    setStatutSuggestComment(false)
+                    setCommentAuteur('')
+                    setCommentContenu('')
+                  }}
+                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleAddCommentaire}
+                  disabled={isSavingComment || !commentAuteur.trim() || !commentContenu.trim()}
+                  className="px-4 py-2 bg-[var(--blue)] text-white rounded-lg text-sm font-semibold hover:bg-[var(--red)] transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  {isSavingComment ? 'Enregistrement...' : 'Enregistrer'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Historique des accès — accordéon */}
+        <div className="bg-white shadow-lg rounded-lg overflow-hidden">
+          <button
+            onClick={() => setJournalOpen(!journalOpen)}
+            className="w-full flex items-center justify-between p-6 text-left hover:bg-gray-50 transition-colors"
+          >
+            <h2 className="m-0">Historique des accès et modifications</h2>
+            <span className="text-gray-400 text-lg ml-4">{journalOpen ? '▲' : '▼'}</span>
+          </button>
+
+          {journalOpen && (
+            <div className="px-6 pb-6">
+              {journal.length === 0 ? (
+                <p className="text-gray-500">Aucun historique disponible</p>
+              ) : (
+                <div className="space-y-2">
+                  {journal.map((entry) => (
+                    <div key={entry.id} className="p-3 bg-gray-50 rounded-lg text-sm">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-semibold">{entry.utilisateur}</span>
+                          {' — '}
+                          <span className="text-gray-600">
+                            {entry.action === 'consultation' && 'a consulté le signalement'}
+                            {entry.action === 'modification_statut' &&
+                              `a modifié le statut de "${getStatutLabel(entry.ancien_statut ?? '')}" vers "${getStatutLabel(entry.nouveau_statut ?? '')}"`
+                            }
+                          </span>
+                        </div>
+                        <div className="text-gray-500 text-xs shrink-0 ml-4">
+                          {formatDateTime(entry.created_at)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
       </div>
     </>
   )
