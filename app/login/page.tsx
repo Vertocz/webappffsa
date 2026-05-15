@@ -14,6 +14,11 @@ function LoginForm() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [showForgot, setShowForgot] = useState(false)
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotSent, setForgotSent] = useState(false)
+  const [forgotLoading, setForgotLoading] = useState(false)
+  const [forgotError, setForgotError] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -45,6 +50,82 @@ function LoginForm() {
     }
   }
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setForgotError('')
+    setForgotLoading(true)
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      })
+      if (error) throw error
+      setForgotSent(true)
+    } catch (err) {
+      console.error('Erreur reset password:', err)
+      setForgotError('Une erreur est survenue. Vérifiez l\'adresse e-mail et réessayez.')
+    } finally {
+      setForgotLoading(false)
+    }
+  }
+
+  if (showForgot) {
+    return (
+      <div className="space-y-5">
+        <button
+          onClick={() => { setShowForgot(false); setForgotSent(false); setForgotError('') }}
+          className="text-sm text-gray-500 hover:text-gray-800 transition-colors flex items-center gap-1"
+        >
+          ← Retour à la connexion
+        </button>
+
+        <div>
+          <h2 className="!text-lg !pt-0 !pb-1 font-bold text-gray-800">Mot de passe oublié</h2>
+          <p className="text-sm text-gray-500">
+            Saisissez votre adresse e-mail. Vous recevrez un lien pour créer un nouveau mot de passe.
+          </p>
+        </div>
+
+        {forgotSent ? (
+          <div className="p-4 bg-green-50 border-2 border-green-200 rounded-lg text-green-800 text-sm font-medium">
+            ✅ E-mail envoyé ! Vérifiez votre boîte de réception et suivez le lien pour réinitialiser votre mot de passe.
+          </div>
+        ) : (
+          <form onSubmit={handleForgotPassword} className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Adresse e-mail
+              </label>
+              <input
+                type="email"
+                value={forgotEmail}
+                onChange={(e) => setForgotEmail(e.target.value)}
+                required
+                autoComplete="email"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[var(--blue)] focus:outline-none transition-colors"
+                placeholder="prenom.nom@ffsa.fr"
+              />
+            </div>
+
+            {forgotError && (
+              <div className="p-3 bg-red-50 border-2 border-red-200 rounded-lg text-red-800 text-sm font-medium">
+                {forgotError}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={forgotLoading || !forgotEmail.trim()}
+              className="w-full py-3 px-6 bg-[var(--blue)] text-white rounded-lg font-bold text-lg hover:bg-[var(--red)] transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+            >
+              {forgotLoading ? 'Envoi en cours...' : 'Envoyer le lien'}
+            </button>
+          </form>
+        )}
+      </div>
+    )
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div>
@@ -63,9 +144,18 @@ function LoginForm() {
       </div>
 
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-1">
-          Mot de passe
-        </label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="block text-sm font-semibold text-gray-700">
+            Mot de passe
+          </label>
+          <button
+            type="button"
+            onClick={() => { setShowForgot(true); setForgotEmail(email) }}
+            className="text-xs text-[var(--blue)] hover:underline"
+          >
+            Mot de passe oublié ?
+          </button>
+        </div>
         <input
           type="password"
           value={password}
@@ -117,7 +207,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* useSearchParams() doit être dans un Suspense boundary */}
         <Suspense fallback={<div className="h-48" />}>
           <LoginForm />
         </Suspense>
