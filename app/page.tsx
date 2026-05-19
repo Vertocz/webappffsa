@@ -1,7 +1,6 @@
 "use client"
-
 import { useRef, useEffect, useState } from 'react'
-import Link from "next/link"
+import ScenarioModal from '@/components/ScenarioModal'
 
 function AutoPlayYouTube({ videoId }: { videoId: string }) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
@@ -10,8 +9,6 @@ function AutoPlayYouTube({ videoId }: { videoId: string }) {
   useEffect(() => {
     const iframe = iframeRef.current
     if (!iframe) return
-
-    // Intersection Observer pour mobile
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -24,7 +21,6 @@ function AutoPlayYouTube({ videoId }: { videoId: string }) {
       },
       { threshold: 0.5 }
     )
-
     observer.observe(iframe)
     return () => observer.disconnect()
   }, [])
@@ -44,7 +40,7 @@ function AutoPlayYouTube({ videoId }: { videoId: string }) {
   }
 
   return (
-    <div 
+    <div
       className="relative w-full max-w-2xl mx-auto rounded-lg overflow-hidden shadow-lg"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -63,9 +59,14 @@ function AutoPlayYouTube({ videoId }: { videoId: string }) {
 }
 
 export default function AccueilPage() {
+  const [showScenario, setShowScenario] = useState(false)
+
   return (
     <section className="container mx-auto px-4">
+
       <h1>Signalement pour un.e licencié.e à la FFSA</h1>
+
+      {/* Bloc principal CTA */}
       <div className="max-w-3xl mx-auto my-12 bg-gradient-to-br from-[var(--blue)] to-[var(--red)] rounded-2xl p-8 shadow-2xl">
         <h3 className="text-white text-center text-2xl font-bold mb-4">
           Vous êtes victime ou témoin de violences ?
@@ -74,24 +75,38 @@ export default function AccueilPage() {
           Votre signalement sera traité avec attention.
         </p>
         <div className="text-center">
-          <Link 
-            href="/depot" 
+          <button
+            onClick={() => setShowScenario(true)}
             className="inline-block rounded-xl bg-[var(--yellow)] px-10 py-5 text-2xl font-bold text-white hover:bg-white hover:text-[var(--blue)] transform hover:scale-105 transition-all duration-300 shadow-xl"
           >
             Je fais mon signalement →
-          </Link>
+          </button>
         </div>
       </div>
+
+      {/* Modale scénario */}
+      {showScenario && (
+        <ScenarioModal onClose={() => setShowScenario(false)} />
+      )}
+
+      {/* Comité d'éthique 
       <h2>Qu'est-ce qu'un comité d'éthique ?</h2>
       <div className="text-center">Vidéo de présentation du comité d'éthique</div>
+
+      {/* Confidentialité
       <h2>Qu'est-ce que la confidentialité ?</h2>
       <p className="text-center">Vidéo sur la confidentialité</p>
+
+      Signaler des faits de violence
       <h2>Signaler des faits de violence</h2>
+
       <h3>Qu'est-ce qu'un fait de violence ?</h3>
       <div className="my-6">
         <AutoPlayYouTube videoId="Y6vxWGHQR4w" />
       </div>
-      <h3>Pourquoi est-il important de les signaler ?</h3>
+
+      <h3>Pourquoi est-il important de les signaler ?</h3>*/}
+
     </section>
   )
 }
