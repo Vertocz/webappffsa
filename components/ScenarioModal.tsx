@@ -9,7 +9,7 @@ const scenarios = [
     titre: 'Un câlin qui va trop loin',
     texte: `Tu viens de marquer un panier décisif et de gagner le match. Pour te féliciter, une personne du club s'approche de toi. Elle te prend dans ses bras, mais te serre beaucoup trop fort et trop longtemps. Elle pose ses mains sur ton corps.
 
-Tu t'écartes pour qu'elle arrête, mais elle te dit : "C'est normal, c'est pour te féliciter" et continue.
+Tu te pousses pour qu'elle arrête, mais elle te dit : "C'est normal, c'est pour te féliciter" et continue.
 
 Tu sais au fond de toi que ce n'est pas normal. Tu te sens mal avec cette situation.`,
   },
@@ -72,11 +72,11 @@ export default function ScenarioModal({ onClose }: { onClose: () => void }) {
       <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden">
 
         {/* En-tête — fixe */}
-        <div className="bg-[var(--blue)] px-8 py-6 text-white flex-shrink-0">
-          <p className="text-sm font-semibold uppercase tracking-widest opacity-70 mb-1">
+        <div className="bg-[var(--blue)] px-5 py-3 text-white flex-shrink-0">
+          <p className="text-xs font-semibold uppercase tracking-widest opacity-60 mb-1">
             Situation fictive
           </p>
-          <h2 className="text-xl font-bold leading-snug">
+          <h2 className="!text-base !font-semibold !pb-0 !pt-0 leading-snug text-white">
             Voici un scénario pour t'aider à tester l'application
           </h2>
         </div>
