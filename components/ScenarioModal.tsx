@@ -9,7 +9,7 @@ const scenarios = [
     titre: 'Un câlin qui va trop loin',
     texte: `Tu viens de marquer un panier décisif et de gagner le match. Pour te féliciter, une personne du club s'approche de toi. Elle te prend dans ses bras, mais te serre beaucoup trop fort et trop longtemps. Elle pose ses mains sur ton corps.
 
-Tu te pousses pour qu'elle arrête, mais elle te dit : "C'est normal, c'est pour te féliciter" et continue.
+Tu t'écartes pour qu'elle arrête, mais elle te dit : "C'est normal, c'est pour te féliciter" et continue.
 
 Tu sais au fond de toi que ce n'est pas normal. Tu te sens mal avec cette situation.`,
   },
@@ -69,10 +69,10 @@ export default function ScenarioModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden">
 
-        {/* En-tête */}
-        <div className="bg-[var(--blue)] px-8 py-6 text-white">
+        {/* En-tête — fixe */}
+        <div className="bg-[var(--blue)] px-8 py-6 text-white flex-shrink-0">
           <p className="text-sm font-semibold uppercase tracking-widest opacity-70 mb-1">
             Situation fictive
           </p>
@@ -81,9 +81,9 @@ export default function ScenarioModal({ onClose }: { onClose: () => void }) {
           </h2>
         </div>
 
-        {/* Scénario */}
+        {/* Scénario — scrollable si l'écran est petit */}
         <div
-          className="px-8 py-6 transition-opacity duration-200"
+          className="px-8 py-6 overflow-y-auto flex-1 transition-opacity duration-200"
           style={{ opacity: isLeaving ? 0 : 1 }}
         >
           <div className="flex items-center gap-3 mb-4">
@@ -100,8 +100,8 @@ export default function ScenarioModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="px-8 pb-8 flex flex-col gap-3">
+        {/* Actions — fixes en bas */}
+        <div className="px-8 py-6 flex flex-col gap-3 flex-shrink-0 border-t border-gray-100">
           <button
             onClick={handleAccept}
             className="w-full py-4 px-6 bg-[var(--yellow)] hover:bg-[var(--red)] text-white font-bold rounded-xl transition-colors text-base"
@@ -116,11 +116,12 @@ export default function ScenarioModal({ onClose }: { onClose: () => void }) {
           </button>
           <button
             onClick={onClose}
-            className="text-center text-xs text-gray-400 hover:text-gray-600 transition-colors pt-1"
+            className="text-center text-xs text-gray-400 hover:text-gray-600 transition-colors"
           >
             Annuler
           </button>
         </div>
+
       </div>
     </div>
   )
