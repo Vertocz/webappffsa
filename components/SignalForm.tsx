@@ -140,7 +140,7 @@ export default function SignalForm() {
 
       if (dbError) throw dbError
 
-      router.push('/liens-utiles')
+      router.push('/retour')
 
     } catch (error) {
       console.error('Erreur envoi:', JSON.stringify(error, null, 2))
