@@ -7,32 +7,32 @@ const scenarios = [
   {
     emoji: '🤗',
     titre: 'Un câlin qui va trop loin',
-    texte: `Tu viens de marquer un panier décisif et de gagner le match. Pour te féliciter, une personne du club s'approche de toi. Elle te prend dans ses bras, mais te serre beaucoup trop fort et trop longtemps. Elle pose ses mains sur ton corps.
+    texte: `Tu viens de gagner un tournoi de tennis de table très important. Pour te féliciter, un adulte du club s'approche de toi. Il te prend dans ses bras, mais te serre beaucoup trop fort et trop longtemps. Il pose ses mains sur ton corps.
 
-Tu te pousses pour qu'elle arrête, mais elle te dit : "C'est normal, c'est pour te féliciter" et continue.
+Tu te pousses pour qu'il arrête, mais il te dit : "C'est normal, c'est pour te féliciter" et continue.
 
 Tu sais au fond de toi que ce n'est pas normal. Tu te sens mal avec cette situation.`,
   },
   {
     emoji: '😤',
     titre: 'Un entraîneur qui perd le contrôle',
-    texte: `Pendant l'entraînement sur le terrain de basket, tu rates plusieurs lancers. Ton entraîneur s'énerve très fort. Il crie sur toi devant toute l'équipe et jette son chronomètre par terre.
+    texte: `Pendant l'entraînement, tu rates plusieurs retours et tu perds des points facilement. Ton entraîneur s'énerve très fort. Il crie sur toi devant tous les autres joueurs et frappe la table avec sa raquette.
 
 Tu as eu peur. Tu n'as plus envie de retourner à l'entraînement.`,
   },
   {
     emoji: '😳',
     titre: 'Des remarques bizarres sur ton corps',
-    texte: `Tu es sur le terrain pour t'entraîner. Une personne du club te regarde longuement et te fait des remarques sur ton corps ou sur ta tenue :
+    texte: `Tu t'échauffes avant un match. Une personne du club te regarde longuement et te fait des remarques sur ton corps ou sur ta tenue :
 
-"Ton short te va bien, tourne-toi pour voir." Ou encore : "Tu as un beau corps pour jouer au basket."
+"Ton short te va bien, tourne-toi pour voir." Ou encore : "Tu as un beau corps pour jouer au ping."
 
 Cette personne répète ces phrases à chaque fois qu'elle te voit. Tu te sens très gêné·e et tu as peur de la croiser.`,
   },
   {
     emoji: '😨',
-    titre: 'Intimidation dans les vestiaires',
-    texte: `Tu bois une boisson après le match. Un joueur s'approche de toi et te bouscule volontairement pour te piquer ta boisson ou ton équipement.
+    titre: 'Intimidation dans la salle',
+    texte: `Tu ranges ta raquette après l'entraînement. Un joueur plus vieux s'approche de toi et te pousse volontairement pour te prendre ton étui ou ta raquette.
 
 Il te regarde dans les yeux et dit : "Si tu parles de ça à quelqu'un, tu vas voir."
 
@@ -41,7 +41,7 @@ Tu as peur des conséquences.`,
   {
     emoji: '😢',
     titre: 'Des moqueries après une défaite',
-    texte: `Tu viens de perdre un match important. Dans les vestiaires, un joueur d'une autre équipe se moque de toi. Il rigole très fort et te dit que tu es "nul·le", que tu ne sais pas jouer au basket.
+    texte: `Tu viens de perdre un match de championnat. Dans la salle, un joueur de l'équipe adverse se moque de toi. Il rigole très fort et te dit que tu es "nul·le", que tu n'as rien à faire à cette table.
 
 Tu te sens très triste et tu as honte. Tu ne veux plus revenir.`,
   },
