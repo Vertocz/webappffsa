@@ -41,7 +41,7 @@ Tu as peur des conséquences.`,
   {
     emoji: '😢',
     titre: 'Des moqueries après une défaite',
-    texte: `Tu viens de perdre un match de championnat. Dans la salle, un joueur de l'équipe adverse se moque de toi. Il rigole très fort et te dit que tu es "nul·le", que tu n'as rien à faire à cette table.
+    texte: `Tu viens de perdre un match de championnat. Dans la salle, un adversaire se moque de toi. Il rigole très fort et te dit que tu es "nul·le", que tu n'as rien à faire à cette table.
 
 Tu te sens très triste et tu as honte. Tu ne veux plus revenir.`,
   },
