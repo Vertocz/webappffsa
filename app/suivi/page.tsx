@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/app/lib/supabase'
+import { STATUT_LABELS, STATUT_BADGE_COLORS, STATUT_BORDER_COLORS } from '@/app/lib/statuts'
 import Link from 'next/link'
 
 interface Signalement {
   id: string
   created_at: string
-  type_commission: 'violences' | 'ethique' | 'ne_sais_pas'
   anonyme: boolean
   statut: string
   type_depot: 'vocal' | 'ecrit'
@@ -15,25 +15,25 @@ interface Signalement {
 
 export default function SuiviSignalements() {
   const [signalements, setSignalements] = useState<Signalement[]>([])
-  const [filtreCommission, setFiltreCommission] = useState<
-    'violences' | 'ethique' | 'ne_sais_pas' | 'tous'
+  const [filtreStatut, setFiltreStatut] = useState<
+    'non_traite' | 'non_avenu' | 'transmis_ethique' | 'transmis_discipline' | 'traite' | 'tous'
   >('tous')
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     fetchSignalements()
-  }, [filtreCommission])
+  }, [filtreStatut])
 
   const fetchSignalements = async () => {
     setIsLoading(true)
     try {
       let query = supabase
         .from('signalements')
-        .select('id, created_at, type_commission, anonyme, statut, type_depot')
+        .select('id, created_at, anonyme, statut, type_depot')
         .order('created_at', { ascending: false })
 
-      if (filtreCommission !== 'tous') {
-        query = query.eq('type_commission', filtreCommission)
+      if (filtreStatut !== 'tous') {
+        query = query.eq('statut', filtreStatut)
       }
 
       const { data, error } = await query
@@ -54,33 +54,10 @@ export default function SuiviSignalements() {
     }).format(new Date(dateString))
   }
 
-  const getCommissionLabel = (type: string) => {
-    switch (type) {
-      case 'violences':   return 'Commission contre les violences'
-      case 'ethique':     return "Commission d'éthique"
-      case 'ne_sais_pas': return 'Non précisé'
-      default:            return type
-    }
-  }
-
   const getStatutBadge = (statut: string) => {
-    const badges: Record<string, string> = {
-      non_traite:          'bg-gray-200 text-gray-800',
-      non_avenu:           'bg-slate-800 text-slate-300',
-      transmis_ethique:    'bg-[var(--yellow)] text-yellow-900',
-      transmis_discipline: 'bg-[var(--red)] text-red-100',
-      traite:              'bg-green-900 text-green-200',
-    }
-    const labels: Record<string, string> = {
-      non_traite:          'Non traité',
-      non_avenu:           'Non avenu',
-      transmis_ethique:    "Transmis au comité d'éthique",
-      transmis_discipline: 'Transmis à la commission de discipline',
-      traite:              'Traité',
-    }
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${badges[statut] ?? badges.non_traite}`}>
-        {labels[statut] ?? statut}
+      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${STATUT_BADGE_COLORS[statut] ?? STATUT_BADGE_COLORS.non_traite}`}>
+        {STATUT_LABELS[statut] ?? statut}
       </span>
     )
   }
@@ -92,19 +69,21 @@ export default function SuiviSignalements() {
 
         {/* Filtres */}
         <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-3 text-gray-700">Filtrer par commission</h2>
+          <h2 className="text-lg font-semibold mb-3 text-gray-700">Filtrer par statut</h2>
           <div className="flex flex-wrap gap-3">
             {[
-              { value: 'tous',       label: 'Tous les signalements', active: 'bg-[var(--blue)] text-white' },
-              { value: 'violences',  label: 'Lutte contre les violences', active: 'bg-[var(--red)] text-white' },
-              { value: 'ethique',    label: "Questions éthiques", active: 'bg-[var(--yellow)] text-white' },
-              { value: 'ne_sais_pas',label: 'Non précisés', active: 'bg-gray-600 text-white' },
+              { value: 'tous',                label: 'Tous les signalements',  active: 'bg-[var(--blue)] text-white' },
+              { value: 'non_traite',          label: STATUT_LABELS.non_traite,          active: 'bg-gray-600 text-white' },
+              { value: 'transmis_ethique',    label: STATUT_LABELS.transmis_ethique,    active: 'bg-[var(--yellow)] text-white' },
+              { value: 'transmis_discipline', label: STATUT_LABELS.transmis_discipline, active: 'bg-[var(--red)] text-white' },
+              { value: 'traite',              label: STATUT_LABELS.traite,              active: 'bg-green-700 text-white' },
+              { value: 'non_avenu',           label: STATUT_LABELS.non_avenu,           active: 'bg-slate-700 text-white' },
             ].map(({ value, label, active }) => (
               <button
                 key={value}
-                onClick={() => setFiltreCommission(value as typeof filtreCommission)}
+                onClick={() => setFiltreStatut(value as typeof filtreStatut)}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  filtreCommission === value
+                  filtreStatut === value
                     ? active
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
@@ -135,16 +114,11 @@ export default function SuiviSignalements() {
       ) : (
         <div className="space-y-3">
           {signalements.map((s) => {
-            const borderColors: Record<string, string> = {
-              violences:   'border-l-red-500',
-              ethique:     'border-l-yellow-500',
-              ne_sais_pas: 'border-l-gray-400',
-            }
             return (
               <Link
                 key={s.id}
                 href={`/suivi/${s.id}`}
-                className={`block bg-white shadow-md rounded-lg p-5 hover:shadow-xl transition-all border-l-8 ${borderColors[s.type_commission]} hover:scale-[1.01]`}
+                className={`block bg-white shadow-md rounded-lg p-5 hover:shadow-xl transition-all border-l-8 ${STATUT_BORDER_COLORS[s.statut] ?? STATUT_BORDER_COLORS.non_traite} hover:scale-[1.01]`}
               >
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-6 flex-1">
@@ -164,9 +138,11 @@ export default function SuiviSignalements() {
                       </div>
                     </div>
 
-                    <div className="flex-1">
-                      <div className="text-sm text-gray-500">Commission</div>
-                      <div className="font-semibold text-gray-900">{getCommissionLabel(s.type_commission)}</div>
+                    <div className="min-w-[100px]">
+                      <div className="text-sm text-gray-500">Format</div>
+                      <div className="font-semibold text-gray-900">
+                        {s.type_depot === 'vocal' ? '🎤 Vocal' : '✍️ Écrit'}
+                      </div>
                     </div>
 
                     <div>{getStatutBadge(s.statut)}</div>

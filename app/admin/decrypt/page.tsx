@@ -8,7 +8,6 @@ import Link from 'next/link'
 interface Signalement {
   id: string
   created_at: string
-  type_commission: string
   type_depot: 'vocal' | 'ecrit'
   anonyme: boolean
   texte_chiffre: string | null

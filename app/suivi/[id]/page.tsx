@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/app/lib/supabase'
+import { STATUT_LABELS, getStatutLabel } from '@/app/lib/statuts'
 import {
   actionDecryptText,
   actionDecryptAudio,
@@ -15,7 +16,6 @@ import Link from 'next/link'
 interface Signalement {
   id: string
   created_at: string
-  type_commission: 'violences' | 'ethique' | 'ne_sais_pas'
   type_depot: 'vocal' | 'ecrit'
   anonyme: boolean
   nom_prenom: string | null
@@ -268,25 +268,6 @@ export default function DetailSignalement() {
       hour: '2-digit', minute: '2-digit',
     }).format(new Date(dateString))
 
-  const getCommissionLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      violences:   'Commission contre les violences',
-      ethique:     "Commission d'éthique",
-      ne_sais_pas: 'Non précisé',
-    }
-    return labels[type] ?? type
-  }
-
-  const getStatutLabel = (statut: string) => {
-    const labels: Record<string, string> = {
-      non_traite:          'Non traité',
-      non_avenu:           'Non avenu',
-      transmis_ethique:    "Transmis au comité d'éthique",
-      transmis_discipline: 'Transmis à la commission de discipline',
-      traite:              'Traité',
-    }
-    return labels[statut] ?? statut
-  }
 
   if (isLoading) {
     return (
@@ -345,10 +326,6 @@ export default function DetailSignalement() {
               <div className="text-gray-900">{formatDateTime(signalement.created_at)}</div>
             </div>
             <div>
-              <div className="text-sm font-semibold text-gray-600 mb-1">Commission concernée</div>
-              <div className="text-gray-900">{getCommissionLabel(signalement.type_commission)}</div>
-            </div>
-            <div>
               <div className="text-sm font-semibold text-gray-600 mb-1">Type de dépôt</div>
               <div className="text-gray-900">
                 {signalement.type_depot === 'vocal' ? 'Message vocal' : 'Message écrit'}
@@ -398,11 +375,11 @@ export default function DetailSignalement() {
           <h2>Gestion du statut</h2>
           <div className="mt-4 space-y-3">
             {[
-              { value: 'non_traite',          label: 'Non traité',                             hover: 'hover:bg-gray-200 hover:text-gray-800' },
-              { value: 'non_avenu',           label: 'Non avenu',                              hover: 'hover:bg-slate-800 hover:text-slate-300' },
-              { value: 'transmis_ethique',    label: "Transmis au comité d'éthique",           hover: 'hover:bg-[var(--yellow)] hover:text-yellow-900' },
-              { value: 'transmis_discipline', label: 'Transmis à la commission de discipline', hover: 'hover:bg-[var(--red)] hover:text-red-100' },
-              { value: 'traite',              label: 'Traité',                                 hover: 'hover:bg-green-900 hover:text-green-200' },
+              { value: 'non_traite',          label: STATUT_LABELS.non_traite,          hover: 'hover:bg-gray-200 hover:text-gray-800' },
+              { value: 'non_avenu',           label: STATUT_LABELS.non_avenu,           hover: 'hover:bg-slate-800 hover:text-slate-300' },
+              { value: 'transmis_ethique',    label: STATUT_LABELS.transmis_ethique,    hover: 'hover:bg-[var(--yellow)] hover:text-yellow-900' },
+              { value: 'transmis_discipline', label: STATUT_LABELS.transmis_discipline, hover: 'hover:bg-[var(--red)] hover:text-red-100' },
+              { value: 'traite',              label: STATUT_LABELS.traite,              hover: 'hover:bg-green-900 hover:text-green-200' },
             ].map(({ value, label, hover }) => (
               <label
                 key={value}

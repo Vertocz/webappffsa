@@ -182,7 +182,6 @@ export default function SignalForm() {
         .insert({
           audio_url:    audioUrlStored,
           type_depot:   typeDepot,
-          type_commission: 'ne_sais_pas',
           anonyme:      isAnonymous,
           ...encryptedData,
           ...encryptedContact,
