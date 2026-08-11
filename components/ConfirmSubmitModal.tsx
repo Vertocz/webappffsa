@@ -4,16 +4,9 @@ interface ConfirmSubmitModalProps {
   typeDepot: 'vocal' | 'ecrit'
   isAnonymous: boolean
   nomPrenom: string
-  typeCommission: 'violences' | 'ethique' | 'ne_sais_pas'
   recordingTime?: number
   onConfirm: () => void
   onCancel: () => void
-}
-
-const commissionLabels: Record<string, string> = {
-  violences:   'Commission contre les violences',
-  ethique:     "Commission d'éthique",
-  ne_sais_pas: 'Non précisé — sera orienté à la réception',
 }
 
 function formatDuration(seconds: number): string {
@@ -26,7 +19,6 @@ export default function ConfirmSubmitModal({
   typeDepot,
   isAnonymous,
   nomPrenom,
-  typeCommission,
   recordingTime = 0,
   onConfirm,
   onCancel,
@@ -41,7 +33,7 @@ export default function ConfirmSubmitModal({
             Confirmer votre signalement
           </h2>
           <p className="text-gray-500 text-sm mt-1">
-            Vérifiez les informations avant d'envoyer
+            Vérifiez les informations avant d&apos;envoyer
           </p>
         </div>
 
@@ -61,13 +53,6 @@ export default function ConfirmSubmitModal({
               {isAnonymous
                 ? '👤 Anonyme'
                 : nomPrenom || 'Identifié (nom non renseigné)'}
-            </span>
-          </div>
-
-          <div className="flex justify-between items-start py-3 border-b border-gray-100 gap-4">
-            <span className="text-gray-500 font-medium shrink-0">Commission</span>
-            <span className="font-semibold text-gray-800 text-right">
-              {commissionLabels[typeCommission]}
             </span>
           </div>
         </div>

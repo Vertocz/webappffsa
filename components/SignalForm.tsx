@@ -1,22 +1,38 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Field, Label, Textarea } from '@headlessui/react'
 import { supabase } from '@/app/lib/supabase'
 import { encryptText, encryptBlob } from '@/app/lib/encryption'
 import VoiceRecorder from './VoiceRecorder'
 import ContactForm from './ContactForm'
-import CommissionSelector from './CommissionSelector'
 import ConfirmSubmitModal from './ConfirmSubmitModal'
 import Toast from './Toast'
+
+// Étapes du formulaire, utilisées pour la barre de progression
+const TOTAL_STEPS = 3
+
+// Extrait proprement les infos utiles d'une erreur Supabase (évite tout `any`)
+function extractErrorInfo(error: unknown): { message?: string; details?: string; hint?: string } {
+  if (typeof error === 'object' && error !== null) {
+    const e = error as Record<string, unknown>
+    return {
+      message: typeof e.message === 'string' ? e.message : undefined,
+      details: typeof e.details === 'string' ? e.details : undefined,
+      hint: typeof e.hint === 'string' ? e.hint : undefined,
+    }
+  }
+  return {}
+}
 
 export default function SignalForm() {
   const router = useRouter()
 
   const [typeDepot, setTypeDepot] = useState<'vocal' | 'ecrit'>('vocal')
-  const [typeCommission, setTypeCommission] = useState<'violences' | 'ethique' | 'ne_sais_pas'>('ne_sais_pas')
+  const [hasChosenFormat, setHasChosenFormat] = useState(false)
   const [isAnonymous, setIsAnonymous] = useState(false)
+  const [contactDone, setContactDone] = useState(false)
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [recordingTime, setRecordingTime] = useState(0)
@@ -30,6 +46,35 @@ export default function SignalForm() {
     texteEcrit: ''
   })
 
+  // Références utilisées pour faire défiler automatiquement vers l'étape suivante
+  const depotDetailRef = useRef<HTMLDivElement>(null)
+  const contactSectionRef = useRef<HTMLDivElement>(null)
+  const submitButtonRef = useRef<HTMLButtonElement>(null)
+
+  // `delayMs` laisse le temps au clavier virtuel de se refermer sur mobile
+  // avant de faire défiler la page, pour un rendu plus doux.
+  const scrollToRef = (
+    ref: React.RefObject<HTMLElement | null>,
+    block: ScrollLogicalPosition = 'start',
+    delayMs = 0
+  ) => {
+    setTimeout(() => {
+      requestAnimationFrame(() => {
+        ref.current?.scrollIntoView({ behavior: 'smooth', block })
+      })
+    }, delayMs)
+  }
+
+  const contentDone = typeDepot === 'vocal' ? !!audioBlob : formData.texteEcrit.trim().length > 0
+  const currentStep = contentDone ? 3 : (hasChosenFormat ? 2 : 1)
+
+  // Choix "vocal" / "écrit" : on avance d'une étape et on descend vers la section correspondante
+  const chooseTypeDepot = (choice: 'vocal' | 'ecrit') => {
+    setTypeDepot(choice)
+    setHasChosenFormat(true)
+    scrollToRef(depotDetailRef)
+  }
+
   useEffect(() => {
     return () => {
       if (audioUrl) URL.revokeObjectURL(audioUrl)
@@ -41,6 +86,14 @@ export default function SignalForm() {
     const url = URL.createObjectURL(blob)
     setAudioUrl(url)
     setRecordingTime(duration)
+    // L'enregistrement est terminé : direction les coordonnées
+    scrollToRef(contactSectionRef)
+  }
+
+  // Une fois les coordonnées (ou le choix d'anonymat) renseignées, direction le bouton d'envoi
+  const handleContactStepComplete = () => {
+    setContactDone(true)
+    scrollToRef(submitButtonRef, 'center', 300)
   }
 
   const resetRecording = () => {
@@ -129,7 +182,7 @@ export default function SignalForm() {
         .insert({
           audio_url:    audioUrlStored,
           type_depot:   typeDepot,
-          type_commission: typeCommission,
+          type_commission: 'ne_sais_pas',
           anonyme:      isAnonymous,
           ...encryptedData,
           ...encryptedContact,
@@ -143,10 +196,11 @@ export default function SignalForm() {
       router.push('/retour')
 
     } catch (error) {
+      const { message, details, hint } = extractErrorInfo(error)
       console.error('Erreur envoi:', JSON.stringify(error, null, 2))
-      console.error('Erreur envoi (message):', (error as any)?.message)
-      console.error('Erreur envoi (details):', (error as any)?.details)
-      console.error('Erreur envoi (hint):', (error as any)?.hint)
+      console.error('Erreur envoi (message):', message)
+      console.error('Erreur envoi (details):', details)
+      console.error('Erreur envoi (hint):', hint)
       setShowToastError(true)
     } finally {
       setIsSubmitting(false)
@@ -172,7 +226,6 @@ export default function SignalForm() {
           typeDepot={typeDepot}
           isAnonymous={isAnonymous}
           nomPrenom={formData.nomPrenom}
-          typeCommission={typeCommission}
           recordingTime={recordingTime}
           onConfirm={handleConfirmedSubmit}
           onCancel={() => setShowConfirm(false)}
@@ -181,13 +234,29 @@ export default function SignalForm() {
 
       <form onSubmit={handleSubmitClick} className="max-w-3xl mx-auto space-y-8 pb-8">
 
+        {/* Barre de progression */}
+        <div>
+          <div className="flex justify-between items-center text-sm font-semibold text-gray-500 mb-2">
+            <span>Étape {currentStep} / {TOTAL_STEPS}</span>
+          </div>
+          <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-[var(--blue)] rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${(currentStep / TOTAL_STEPS) * 100}%` }}
+            />
+          </div>
+        </div>
+
         {/* Choix vocal ou écrit */}
         <div className="bg-gray-50 p-6 rounded-lg">
-          <h2 className="text-xl font-bold mb-4 text-[var(--blue)]">Comment souhaitez-vous signaler ?</h2>
+          <h2 className="text-xl font-bold mb-4 text-[var(--blue)] flex items-center gap-2">
+            Comment souhaitez-vous signaler ?
+            {hasChosenFormat && <span aria-hidden="true">✅</span>}
+          </h2>
           <div className="flex gap-4">
             <button
               type="button"
-              onClick={() => setTypeDepot('vocal')}
+              onClick={() => chooseTypeDepot('vocal')}
               className={`flex-1 py-4 px-6 rounded-lg font-semibold text-lg transition-all ${
                 typeDepot === 'vocal'
                   ? 'bg-[var(--blue)] text-white scale-105'
@@ -198,7 +267,7 @@ export default function SignalForm() {
             </button>
             <button
               type="button"
-              onClick={() => setTypeDepot('ecrit')}
+              onClick={() => chooseTypeDepot('ecrit')}
               className={`flex-1 py-4 px-6 rounded-lg font-semibold text-lg transition-all ${
                 typeDepot === 'ecrit'
                   ? 'bg-[var(--blue)] text-white scale-105'
@@ -212,8 +281,11 @@ export default function SignalForm() {
 
         {/* Enregistrement vocal */}
         {typeDepot === 'vocal' && (
-          <div className="bg-gray-50 p-6 rounded-lg space-y-6">
-            <h2 className="text-xl font-bold text-[var(--blue)]">🗣️ Votre message vocal</h2>
+          <div ref={depotDetailRef} className="bg-gray-50 p-6 rounded-lg space-y-6">
+            <h2 className="text-xl font-bold text-[var(--blue)] flex items-center gap-2">
+              🗣️ Votre message vocal
+              {contentDone && <span aria-hidden="true">✅</span>}
+            </h2>
             <VoiceRecorder
               onRecordingComplete={handleRecordingComplete}
               audioBlob={audioBlob}
@@ -226,14 +298,21 @@ export default function SignalForm() {
 
         {/* Message écrit */}
         {typeDepot === 'ecrit' && (
-          <div className="bg-gray-50 p-6 rounded-lg">
+          <div ref={depotDetailRef} className="bg-gray-50 p-6 rounded-lg">
             <Field>
               <Label className="block text-xl font-bold mb-3 text-[var(--blue)]">
-                <h2>📝 Votre message écrit</h2>
+                <h2 className="flex items-center gap-2">
+                  📝 Votre message écrit
+                  {contentDone && <span aria-hidden="true">✅</span>}
+                </h2>
               </Label>
               <Textarea
                 value={formData.texteEcrit}
                 onChange={(e) => setFormData({ ...formData, texteEcrit: e.target.value })}
+                onBlur={() => {
+                  // Petit délai pour laisser le clavier virtuel se refermer sur mobile
+                  if (formData.texteEcrit.trim()) scrollToRef(contactSectionRef, 'start', 300)
+                }}
                 required
                 rows={10}
                 placeholder="Décrivez les faits ici..."
@@ -244,23 +323,22 @@ export default function SignalForm() {
         )}
 
         {/* Coordonnées */}
-        <ContactForm
-          isAnonymous={isAnonymous}
-          onAnonymousChange={setIsAnonymous}
-          nomPrenom={formData.nomPrenom}
-          telephone={formData.telephone}
-          onNomPrenomChange={(value) => setFormData({ ...formData, nomPrenom: value })}
-          onTelephoneChange={(value) => setFormData({ ...formData, telephone: value })}
-        />
-
-        {/* Choix de la commission */}
-        <CommissionSelector
-          value={typeCommission}
-          onChange={setTypeCommission}
-        />
+        <div ref={contactSectionRef}>
+          <ContactForm
+            isAnonymous={isAnonymous}
+            onAnonymousChange={setIsAnonymous}
+            nomPrenom={formData.nomPrenom}
+            telephone={formData.telephone}
+            onNomPrenomChange={(value) => setFormData({ ...formData, nomPrenom: value })}
+            onTelephoneChange={(value) => setFormData({ ...formData, telephone: value })}
+            onStepComplete={handleContactStepComplete}
+            completed={contactDone}
+          />
+        </div>
 
         {/* Bouton envoyer */}
         <button
+          ref={submitButtonRef}
           type="submit"
           disabled={!canSubmit}
           className="w-full py-4 px-6 bg-[var(--yellow)] text-white rounded-lg font-bold text-xl hover:bg-[var(--red)] transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"

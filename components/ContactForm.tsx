@@ -10,6 +10,8 @@ interface ContactFormProps {
   telephone: string
   onNomPrenomChange: (value: string) => void
   onTelephoneChange: (value: string) => void
+  onStepComplete?: () => void
+  completed?: boolean
 }
 
 export default function ContactForm({
@@ -18,7 +20,9 @@ export default function ContactForm({
   nomPrenom,
   telephone,
   onNomPrenomChange,
-  onTelephoneChange
+  onTelephoneChange,
+  onStepComplete,
+  completed = false
 }: ContactFormProps) {
   const [showModal, setShowModal] = useState(false)
 
@@ -37,11 +41,15 @@ export default function ContactForm({
     onNomPrenomChange('')
     onTelephoneChange('')
     setShowModal(false)
+    onStepComplete?.()
   }
 
   return (
     <div className="bg-gray-50 p-6 rounded-lg">
-      <h2 className="text-xl font-bold mb-4 text-[var(--blue)]">Pour qu'on puisse vous aider</h2>
+      <h2 className="text-xl font-bold mb-4 text-[var(--blue)] flex items-center gap-2">
+        Pour qu&apos;on puisse vous aider
+        {completed && <span aria-hidden="true">✅</span>}
+      </h2>
 
       {/* Switch anonyme */}
       <div className="flex items-center gap-3 mb-6">
@@ -59,7 +67,7 @@ export default function ContactForm({
           />
         </Switch>
         <span className="text-base font-semibold text-gray-700 select-none">
-          🔒 Je préfère rester anonyme
+          🥸 Je préfère rester anonyme
         </span>
       </div>
 
@@ -81,6 +89,7 @@ export default function ContactForm({
               type="tel"
               value={telephone}
               onChange={(e) => onTelephoneChange(e.target.value)}
+              onBlur={() => onStepComplete?.()}
               placeholder="06 12 34 56 78"
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-[var(--blue)] focus:outline-none text-lg"
             />
