@@ -1,6 +1,6 @@
 "use client"
 import { useRef, useEffect, useState } from 'react'
-import ScenarioModal from '@/components/ScenarioModal'
+import Link from 'next/link'
 
 function AutoPlayYouTube({ videoId }: { videoId: string }) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
@@ -59,8 +59,6 @@ function AutoPlayYouTube({ videoId }: { videoId: string }) {
 }
 
 export default function AccueilPage() {
-  const [showScenario, setShowScenario] = useState(false)
-
   return (
     <section className="container mx-auto px-4">
 
@@ -75,19 +73,14 @@ export default function AccueilPage() {
           Votre signalement sera traité avec attention.
         </p>
         <div className="text-center">
-          <button
-            onClick={() => setShowScenario(true)}
+          <Link
+            href="/depot"
             className="inline-block rounded-xl bg-[var(--yellow)] px-10 py-5 text-2xl font-bold text-white hover:bg-white hover:text-[var(--blue)] transform hover:scale-105 transition-all duration-300 shadow-xl"
           >
             Je fais mon signalement →
-          </button>
+          </Link>
         </div>
       </div>
-
-      {/* Modale scénario */}
-      {showScenario && (
-        <ScenarioModal onClose={() => setShowScenario(false)} />
-      )}
 
       {/* Comité d'éthique 
       <h2>Qu'est-ce qu'un comité d'éthique ?</h2>
