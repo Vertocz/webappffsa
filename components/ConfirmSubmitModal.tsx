@@ -57,10 +57,6 @@ export default function ConfirmSubmitModal({
           </div>
         </div>
 
-        <div className="bg-blue-50 rounded-lg p-4 text-sm text-blue-800">
-          🔒 Votre signalement sera <strong>chiffré</strong> avant envoi.
-        </div>
-
         <div className="flex gap-3">
           <button
             onClick={onCancel}

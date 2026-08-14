@@ -193,7 +193,7 @@ export default function SignalForm() {
 
       if (dbError) throw dbError
 
-      router.push('/retour')
+      router.push('/liens-utiles?envoye=1')
 
     } catch (error) {
       const { message, details, hint } = extractErrorInfo(error)

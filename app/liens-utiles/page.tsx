@@ -1,17 +1,43 @@
-import Link from "next/link";
-import Image from "next/image";
+'use client'
+
+import { Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
+import Image from 'next/image'
 
 const liens = [
   { href: 'https://www.app-elles.fr/', label: 'App-elles', image: '/app-elles.png' },
-  { href: 'https://colosse.fr/jai-besoin-daide/', label: 'Colosse aux pieds d\'argile', image: '/Logo-Colosse.svg' },
+  { href: 'https://colosse.fr/jai-besoin-daide/', label: "Colosse aux pieds d'argile", image: '/Logo-Colosse.svg' },
   { href: 'https://www.france-victimes.fr/', label: 'France Victimes', image: '/116_006_2022.png' },
   { href: 'https://www.assorebond.com/', label: 'Association Rebond', image: '/rebond.png' },
 ]
 
+// Bandeau affiché uniquement juste après l'envoi d'un signalement (?envoye=1)
+function ConfirmationEnvoi() {
+  const searchParams = useSearchParams()
+  if (searchParams.get('envoye') !== '1') return null
+
+  return (
+    <div className="max-w-2xl mx-auto mb-10 bg-green-50 border-2 border-green-200 rounded-2xl p-6 text-center space-y-2">
+      <div className="text-4xl" aria-hidden="true">✅</div>
+      <p className="text-lg font-bold text-green-800">
+        Votre signalement a bien été envoyé
+      </p>
+      <p className="text-green-700">
+        Merci de votre confiance. Il va être lu avec attention.
+      </p>
+    </div>
+  )
+}
+
 export default function LiensUtiles() {
   return (
     <section className="container mx-auto px-4 py-8">
-      <h1 className="text-center mb-8">Qui peut m'aider ?</h1>
+      <Suspense fallback={null}>
+        <ConfirmationEnvoi />
+      </Suspense>
+
+      <h1 className="text-center mb-8">Qui peut m&apos;aider ?</h1>
       
       <div className="flex flex-wrap justify-center items-center gap-8 max-w-5xl mx-auto">
         {liens.map((lien) => (
