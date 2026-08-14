@@ -46,9 +46,8 @@ export default function ContactForm({
 
   return (
     <div className="bg-gray-50 p-6 rounded-lg">
-      <h2 className="text-xl font-bold mb-4 text-[var(--blue)] flex items-center gap-2">
-        Pour qu&apos;on puisse vous aider
-        {completed && <span aria-hidden="true">✅</span>}
+      <h2 className="text-xl font-bold mb-4 text-[var(--blue)]">
+        Pour qu&apos;on puisse vous aider {completed && <span aria-hidden="true">✅</span>}
       </h2>
 
       {/* Switch anonyme */}
@@ -67,7 +66,7 @@ export default function ContactForm({
           />
         </Switch>
         <span className="text-base font-semibold text-gray-700 select-none">
-          🥸 Je préfère rester anonyme
+          😶‍🌫️🫣 Je préfère rester anonyme
         </span>
       </div>
 

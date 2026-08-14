@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Field, Label, Textarea } from '@headlessui/react'
 import { supabase } from '@/app/lib/supabase'
 import { encryptText, encryptBlob } from '@/app/lib/encryption'
@@ -233,9 +234,17 @@ export default function SignalForm() {
 
       <form onSubmit={handleSubmitClick} className="max-w-3xl mx-auto space-y-8 pb-8">
 
-        {/* Barre de progression */}
-        <div>
+        {/* Barre de progression — toujours visible en haut de l'écran */}
+        <div className="sticky top-0 z-40 -mx-4 px-4 py-3 bg-white/95 backdrop-blur-sm shadow-sm">
           <div className="flex justify-between items-center text-sm font-semibold text-gray-500 mb-2">
+            <Link
+              href="/"
+              aria-label="Retour à l'accueil"
+              title="Retour à l'accueil"
+              className="text-lg leading-none text-gray-500 hover:text-[var(--blue)] transition-colors"
+            >
+              🏠
+            </Link>
             <span>Étape {currentStep} / {TOTAL_STEPS}</span>
           </div>
           <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
@@ -248,9 +257,8 @@ export default function SignalForm() {
 
         {/* Choix vocal ou écrit */}
         <div className="bg-gray-50 p-6 rounded-lg">
-          <h2 className="text-xl font-bold mb-4 text-[var(--blue)] flex items-center gap-2">
-            Comment souhaitez-vous signaler ?
-            {hasChosenFormat && <span aria-hidden="true">✅</span>}
+          <h2 className="text-xl font-bold mb-4 text-[var(--blue)]">
+            Comment souhaitez-vous signaler ? {hasChosenFormat && <span aria-hidden="true">✅</span>}
           </h2>
           <div className="flex gap-4">
             <button
@@ -281,9 +289,8 @@ export default function SignalForm() {
         {/* Enregistrement vocal */}
         {typeDepot === 'vocal' && (
           <div ref={depotDetailRef} className="bg-gray-50 p-6 rounded-lg space-y-6">
-            <h2 className="text-xl font-bold text-[var(--blue)] flex items-center gap-2">
-              🗣️ Votre message vocal
-              {contentDone && <span aria-hidden="true">✅</span>}
+            <h2 className="text-xl font-bold text-[var(--blue)]">
+              🗣️ Votre message vocal {contentDone && <span aria-hidden="true">✅</span>}
             </h2>
             <VoiceRecorder
               onRecordingComplete={handleRecordingComplete}
@@ -300,9 +307,8 @@ export default function SignalForm() {
           <div ref={depotDetailRef} className="bg-gray-50 p-6 rounded-lg">
             <Field>
               <Label className="block text-xl font-bold mb-3 text-[var(--blue)]">
-                <h2 className="flex items-center gap-2">
-                  📝 Votre message écrit
-                  {contentDone && <span aria-hidden="true">✅</span>}
+                <h2>
+                  📝 Votre message écrit {contentDone && <span aria-hidden="true">✅</span>}
                 </h2>
               </Label>
               <Textarea
