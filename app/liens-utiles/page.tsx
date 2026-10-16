@@ -6,7 +6,6 @@ import Link from 'next/link'
 import Image from 'next/image'
 
 const liens = [
-  { href: 'https://www.app-elles.fr/', label: 'App-elles', image: '/app-elles.png' },
   { href: 'https://colosse.fr/jai-besoin-daide/', label: "Colosse aux pieds d'argile", image: '/Logo-Colosse.svg' },
   { href: 'https://www.france-victimes.fr/', label: 'France Victimes', image: '/116_006_2022.png' },
   { href: 'https://www.assorebond.com/', label: 'Association Rebond', image: '/rebond.png' },
