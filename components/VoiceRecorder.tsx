@@ -30,7 +30,10 @@ export default function VoiceRecorder({
   // Ref pour avoir la durée courante dans le callback onstop (évite la stale closure)
   const localRecordingTimeRef = useRef(0)
 
-  const MAX_RECORDING_TIME = 600 // 10 minutes
+  const MAX_RECORDING_TIME = 300 // 5 minutes
+  // 32 kbps mono suffit largement pour la voix (Opus) : 5 min ≈ 1,2 Mo,
+  // contre ~4,8 Mo avec le débit par défaut du navigateur.
+  const AUDIO_BITS_PER_SECOND = 32000
 
   useEffect(() => {
     return () => {
@@ -53,7 +56,9 @@ export default function VoiceRecorder({
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true }
+      })
 
       audioContextRef.current = new AudioContext()
       const source = audioContextRef.current.createMediaStreamSource(stream)
@@ -62,7 +67,8 @@ export default function VoiceRecorder({
       source.connect(analyserRef.current)
 
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus'
+        mimeType: 'audio/webm;codecs=opus',
+        audioBitsPerSecond: AUDIO_BITS_PER_SECOND
       })
 
       mediaRecorderRef.current = mediaRecorder
@@ -97,12 +103,9 @@ export default function VoiceRecorder({
       analyzeAudio()
 
       timerRef.current = setInterval(() => {
-        setLocalRecordingTime(prev => {
-          const next = prev >= MAX_RECORDING_TIME ? prev : prev + 1
-          localRecordingTimeRef.current = next
-          if (prev >= MAX_RECORDING_TIME) stopRecording()
-          return next
-        })
+        localRecordingTimeRef.current += 1
+        setLocalRecordingTime(localRecordingTimeRef.current)
+        if (localRecordingTimeRef.current >= MAX_RECORDING_TIME) stopRecording()
       }, 1000)
 
     } catch (error) {
@@ -112,8 +115,11 @@ export default function VoiceRecorder({
   }
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop()
+    // On teste l'état réel du MediaRecorder (et non le state React `isRecording`,
+    // périmé dans la closure du setInterval, ce qui empêchait l'arrêt automatique).
+    const recorder = mediaRecorderRef.current
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.stop()
       setIsRecording(false)
       setAudioLevel(0)
       if (timerRef.current) {
@@ -185,7 +191,7 @@ export default function VoiceRecorder({
       <p className="text-gray-600">
         {isRecording
           ? 'Enregistrement en cours...'
-          : 'Cliquez sur le bouton pour commencer à parler'}
+          : 'Cliquez sur le bouton pour commencer à parler (5 minutes maximum)'}
       </p>
     </div>
   )

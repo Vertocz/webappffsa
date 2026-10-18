@@ -4,8 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Field, Label, Textarea } from '@headlessui/react'
-import { supabase } from '@/app/lib/supabase'
-import { encryptText, encryptBlob } from '@/app/lib/encryption'
+import { actionSubmitSignalement } from '@/app/actions/submit-signalement'
 import VoiceRecorder from './VoiceRecorder'
 import ContactForm from './ContactForm'
 import ConfirmSubmitModal from './ConfirmSubmitModal'
@@ -13,19 +12,6 @@ import Toast from './Toast'
 
 // Étapes du formulaire, utilisées pour la barre de progression
 const TOTAL_STEPS = 3
-
-// Extrait proprement les infos utiles d'une erreur Supabase (évite tout `any`)
-function extractErrorInfo(error: unknown): { message?: string; details?: string; hint?: string } {
-  if (typeof error === 'object' && error !== null) {
-    const e = error as Record<string, unknown>
-    return {
-      message: typeof e.message === 'string' ? e.message : undefined,
-      details: typeof e.details === 'string' ? e.details : undefined,
-      hint: typeof e.hint === 'string' ? e.hint : undefined,
-    }
-  }
-  return {}
-}
 
 export default function SignalForm() {
   const router = useRouter()
@@ -110,97 +96,35 @@ export default function SignalForm() {
     setShowConfirm(true)
   }
 
-  // Appelé par la modale après confirmation
+  // Appelé par la modale après confirmation.
+  // Le chiffrement et l'enregistrement se font côté serveur (Server Action) :
+  // la clé de chiffrement n'est donc jamais envoyée au navigateur.
   const handleConfirmedSubmit = async () => {
     setShowConfirm(false)
     setIsSubmitting(true)
 
     try {
-      const passphrase = process.env.NEXT_PUBLIC_ENCRYPTION_KEY
-      if (!passphrase) {
-        throw new Error('Clé de chiffrement non configurée')
+      const payload = new FormData()
+      payload.set('typeDepot', typeDepot)
+      payload.set('anonyme', String(isAnonymous))
+
+      if (typeDepot === 'ecrit') {
+        payload.set('texte', formData.texteEcrit)
       }
-
-      let audioUrlStored = null
-      let encryptedData: Record<string, string> = {}
-
-      // Chiffrement du message écrit
-      if (typeDepot === 'ecrit' && formData.texteEcrit) {
-        const encrypted = await encryptText(formData.texteEcrit, passphrase)
-        encryptedData = {
-          texte_chiffre: encrypted.ciphertext,
-          texte_iv:      encrypted.iv,
-          texte_salt:    encrypted.salt
-        }
-      }
-
-      // Chiffrement et upload du fichier audio
       if (typeDepot === 'vocal' && audioBlob) {
-        const { encryptedBlob, iv, salt } = await encryptBlob(audioBlob, passphrase)
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.enc`
-
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('depots')
-          .upload(fileName, encryptedBlob, {
-            contentType: 'application/octet-stream',
-            cacheControl: '3600',
-            upsert: false
-          })
-
-        if (uploadError) throw uploadError
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('depots')
-          .getPublicUrl(uploadData.path)
-
-        audioUrlStored = publicUrl
-        encryptedData = { audio_iv: iv, audio_salt: salt }
+        payload.set('audio', audioBlob, 'message.webm')
+      }
+      if (!isAnonymous) {
+        payload.set('nomPrenom', formData.nomPrenom)
+        payload.set('telephone', formData.telephone)
       }
 
-      // Chiffrement des coordonnées si non anonyme
-      let encryptedContact: Record<string, string> = {}
-      if (!isAnonymous && formData.nomPrenom) {
-        const encryptedNom = await encryptText(formData.nomPrenom, passphrase)
-        encryptedContact = {
-          ...encryptedContact,
-          nom_prenom_chiffre: encryptedNom.ciphertext,
-          nom_prenom_iv:      encryptedNom.iv,
-          nom_prenom_salt:    encryptedNom.salt
-        }
-      }
-      if (!isAnonymous && formData.telephone) {
-        const encryptedTel = await encryptText(formData.telephone, passphrase)
-        encryptedContact = {
-          ...encryptedContact,
-          telephone_chiffre: encryptedTel.ciphertext,
-          telephone_iv:      encryptedTel.iv,
-          telephone_salt:    encryptedTel.salt
-        }
-      }
-
-      const { error: dbError } = await supabase
-        .from('signalements')
-        .insert({
-          audio_url:    audioUrlStored,
-          type_depot:   typeDepot,
-          anonyme:      isAnonymous,
-          ...encryptedData,
-          ...encryptedContact,
-          texte_ecrit:  null,
-          nom_prenom:   null,
-          telephone:    null
-        })
-
-      if (dbError) throw dbError
+      const result = await actionSubmitSignalement(payload)
+      if (!result.ok) throw new Error(result.error)
 
       router.push('/liens-utiles?envoye=1')
-
     } catch (error) {
-      const { message, details, hint } = extractErrorInfo(error)
-      console.error('Erreur envoi:', JSON.stringify(error, null, 2))
-      console.error('Erreur envoi (message):', message)
-      console.error('Erreur envoi (details):', details)
-      console.error('Erreur envoi (hint):', hint)
+      console.error('Erreur envoi:', error)
       setShowToastError(true)
     } finally {
       setIsSubmitting(false)
